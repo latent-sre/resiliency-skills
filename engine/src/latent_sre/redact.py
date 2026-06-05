@@ -89,7 +89,9 @@ def _load_allowlist(root: Path) -> list[str]:
     f = root / ALLOW_FILE
     if not f.is_file():
         return []
-    return [ln.strip() for ln in f.read_text().splitlines() if ln.strip() and not ln.startswith("#")]
+    # Strip first, then test for a comment — so indented `# ...` lines are treated as comments,
+    # not as literal allow-substrings that could silently suppress real findings.
+    return [s for ln in f.read_text().splitlines() if (s := ln.strip()) and not s.startswith("#")]
 
 
 _TOKEN_RE = re.compile(r"[^\s'\"=:,;()\[\]{}<>]+")
@@ -115,10 +117,9 @@ def scan_text(text: str, path: str = "<text>", allow: list[str] | None = None) -
         if any(a and a in line for a in allow):
             continue
 
-        # 1. Known patterns
+        # 1. Known patterns — report every match on the line, not just the first.
         for name, pat in KNOWN_PATTERNS:
-            m = pat.search(line)
-            if m:
+            for m in pat.finditer(line):
                 findings.append(Finding(path, i, name, _redacted(m.group(0))))
 
         # 2. High-entropy opaque tokens (paths/URLs/filenames excluded via _entropy_candidate)

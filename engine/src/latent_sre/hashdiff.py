@@ -6,6 +6,7 @@ cosmetic reordering or a new scan timestamp does not look like a human edit.
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,11 @@ def content_hash(path: str | Path) -> str:
     p = Path(path)
     if p.suffix in (".yaml", ".yml"):
         canonical = yamlio.dumps(_strip_volatile(yamlio.load(p)))
+    elif p.suffix == ".json":
+        # Normalize JSON too (sorted keys, volatile stripped, compact) so reformatting or key
+        # reordering doesn't read as a human edit.
+        canonical = json.dumps(_strip_volatile(json.loads(p.read_text(encoding="utf-8"))),
+                               sort_keys=True, separators=(",", ":"))
     else:
         canonical = p.read_text(encoding="utf-8")
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

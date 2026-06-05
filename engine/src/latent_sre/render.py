@@ -85,13 +85,23 @@ def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR) ->
     return tmpl.render(**ctx)
 
 
+def _safe_basename(name: str, fallback: str = "alert") -> str:
+    """The output filename derives from untrusted artifact content (`metadata.name`); strip any path
+    components and constrain to a safe charset so a hostile name can't escape the target dir
+    (path traversal — see render_file). The schema constrains name, but assemble renders before it
+    validates, so this must self-protect."""
+    base = re.sub(r"[^A-Za-z0-9._-]", "-", Path(str(name)).name).strip("._-")
+    return base or fallback
+
+
 def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str] | None = None,
                 adapter_dir: Path = ADAPTER_DIR) -> list[Path]:
     intent = yamlio.load(intent_path)
-    targets = targets or intent.get("spec", {}).get("renderTargets", TARGETS)
+    if targets is None:  # an explicit empty renderTargets means "render nothing"; only None falls back
+        targets = intent.get("spec", {}).get("renderTargets", TARGETS)
     out_dir = Path(out_dir)
     written: list[Path] = []
-    name = intent.get("metadata", {}).get("name", "alert")
+    name = _safe_basename(intent.get("metadata", {}).get("name", "alert"))
     for t in targets:
         rendered = render_intent(intent, t, adapter_dir)
         ext = "json" if t in ("appdynamics", "thousandeyes") else "yaml" if t in ("grafana", "prometheus") else "conf"

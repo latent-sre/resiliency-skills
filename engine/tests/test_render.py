@@ -36,3 +36,47 @@ def test_injection_in_service_name_is_safely_encoded():
 def test_render_is_deterministic():
     intent = yamlio.load(GOLDEN)
     assert render.render_intent(intent, "prometheus") == render.render_intent(intent, "prometheus")
+
+
+def test_malicious_name_cannot_escape_output_dir(tmp_path):
+    # A hostile metadata.name must not write outside out_dir (path traversal). assemble renders before
+    # it validates, so render_file has to self-protect even against a schema-invalid name.
+    intent = tmp_path / "intent.yaml"
+    intent.write_text(
+        "apiVersion: sre.latent-sre/v1\n"
+        "kind: AlertIntent\n"
+        "metadata:\n"
+        "  name: '../../../pwned'\n"
+        "  service: checkout\n"
+        "spec:\n"
+        "  signal: {type: metric, source: prometheus, query: up}\n"
+        "  condition: {comparator: '<', threshold: 1}\n"
+        "  severity: sev2\n"
+        "  renderTargets: [prometheus]\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "out"
+    written = render.render_file(intent, out)
+    assert written
+    for w in written:
+        assert out.resolve() in w.resolve().parents      # stays under out_dir
+    assert not (tmp_path / "pwned.yaml").exists()         # did not escape the tree
+
+
+def test_empty_render_targets_renders_nothing(tmp_path):
+    # An explicit empty renderTargets means "render nothing" — it must not fall back to all targets.
+    intent = tmp_path / "intent.yaml"
+    intent.write_text(
+        "apiVersion: sre.latent-sre/v1\n"
+        "kind: AlertIntent\n"
+        "metadata:\n"
+        "  name: x\n"
+        "  service: s\n"
+        "spec:\n"
+        "  signal: {type: metric, source: prometheus}\n"
+        "  condition: {comparator: '<', threshold: 1}\n"
+        "  severity: sev3\n"
+        "  renderTargets: []\n",
+        encoding="utf-8",
+    )
+    assert render.render_file(intent, tmp_path / "out") == []
