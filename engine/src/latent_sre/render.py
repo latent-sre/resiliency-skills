@@ -32,11 +32,15 @@ def _sanitize(v: object) -> str:
     return _CONTROL.sub(" ", str(v))[:2000]
 
 
-def _env(adapter_dir: Path) -> SandboxedEnvironment:
-    # Sandboxed (blocks template-level attacks); autoescape OFF because outputs are config formats,
-    # not HTML — per-value escaping is done with `tojson` (JSON/YAML) or `sanitize` (line configs).
+def make_sandbox_env(template_dir: Path) -> SandboxedEnvironment:
+    """Shared sandboxed Jinja2 env for all deterministic rendering (alerts, runbooks, repo files).
+
+    Sandboxed (blocks template-level attacks); autoescape OFF because outputs are config/markdown
+    formats, not HTML — per-value escaping is done with `tojson` (JSON/YAML) or `sanitize` (line- or
+    list-oriented text).
+    """
     env = SandboxedEnvironment(
-        loader=FileSystemLoader(str(adapter_dir)),
+        loader=FileSystemLoader(str(template_dir)),
         autoescape=False,
         undefined=StrictUndefined,
         trim_blocks=True,
@@ -54,7 +58,7 @@ def sentinel(field: str) -> str:
 def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR) -> str:
     if target not in TARGETS:
         raise ValueError(f"unknown target {target!r}")
-    env = _env(adapter_dir)
+    env = make_sandbox_env(adapter_dir)
     tmpl = env.get_template(f"{target}.j2")
     spec = intent.get("spec", {})
     meta = intent.get("metadata", {})

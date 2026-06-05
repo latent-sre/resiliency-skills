@@ -1,0 +1,35 @@
+name: validate
+
+# CI for the generated SRE-{{ service }} repo. Validates against the VENDORED schemas it was born with
+# (.sre/schemas, pinned to the engine version in .sre/version) and runs the fail-closed secret gate.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4            # pin to a commit SHA in production
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install the pinned engine
+        # .sre/version contains e.g. "latent-sre==0.1.0". Use --require-hashes against your index in prod;
+        # use the vendored offline wheel on air-gapped (PCF) runners.
+        run: python -m pip install "$(cat .sre/version)"
+      - name: Validate artifacts against vendored schemas
+        run: latent-sre validate --schema-dir .sre/schemas metadata alerts/intent runbooks
+      - name: Fail-closed secret/PII gate
+        run: latent-sre redact .
+
+  # Defense-in-depth: enable a second, independent OSS secret scanner (gitleaks/trufflehog), pinned by SHA.
+  # secret-scan-second-gate:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: gitleaks/gitleaks-action@<pin-to-sha>
