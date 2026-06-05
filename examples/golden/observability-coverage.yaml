@@ -1,0 +1,28 @@
+apiVersion: sre.latent-sre/v1
+kind: ObservabilityCoverage
+service: checkout
+spec:
+  signals:
+    metrics: true
+    logs: true
+    traces: false
+    synthetics: false
+  coverage:
+    - area: golden-signals-latency
+      status: partial
+      note: p99 only, no p50/p999
+    - area: golden-signals-errors
+      status: covered
+    - area: distributed-tracing
+      status: missing
+  gaps:
+    - no distributed tracing across the checkout to payments-api hop
+    - no synthetic check on the checkout happy path
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: assess-observability-coverage
+ownership: app
+confidence: medium
+needs-human-review: true

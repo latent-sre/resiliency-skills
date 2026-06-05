@@ -1,0 +1,27 @@
+apiVersion: sre.latent-sre/v1
+kind: Dashboard
+service: checkout
+spec:
+  title: Checkout overview
+  panels:
+    - title: 5xx error rate
+      type: timeseries
+      unit: percent
+      signal:
+        source: prometheus
+        query: 'rate(http_requests_total{code=~"5.."}[5m])'
+        description: error rate
+    - title: p99 latency
+      type: timeseries
+      unit: ms
+      signal:
+        source: prometheus
+        metric: p99_latency_seconds
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: generate-dashboards
+ownership: app
+confidence: low
+needs-human-review: true
