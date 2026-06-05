@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "latent-sre"
-# Registered defensively on PyPI to prevent name-squatting (review item F4 / supply-chain).
+# Distribution name; installed from source / internal mirror / offline wheel (not published to public PyPI).
 version = "0.1.0"
 description = "Deterministic transform engine for the SRE resiliency skills suite (render/validate/redact/scaffold)."
 requires-python = ">=3.11"

@@ -80,7 +80,7 @@ examples/               golden (valid) + malicious (hostile target) fixtures
 
 ## Decisions still required before the full build (PR1 preconditions)
 
-1. **PyPI/mirror coordinates** for `latent-sre` (+ offline wheel for air-gapped PCF CI).
+1. **Distribution coordinates** for `latent-sre` — internal mirror or source/offline wheel (offline bundler provided; not published to public PyPI).
 2. **GHAS / secret-protection status** on the `latent-sre` org (sets whether push-protection exists
    or `latent-sre redact` is the sole gate — it is fail-closed either way).
 3. The **pinned model** for the orchestrator agent.
