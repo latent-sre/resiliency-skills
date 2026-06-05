@@ -1,0 +1,13 @@
+## AI-drafted SRE update — human review required
+
+Assembled by latent-sre {{ version }} from a neutral scan. **Do not merge without review.**
+
+### Checklist
+- [ ] Artifacts validate against `.sre/schemas/` (CI green)
+- [ ] No `REPLACE_ME__…` sentinel filled with a guess (set real org config deliberately)
+- [ ] Low-confidence / `unverified-against-live` items reviewed and corrected
+- [ ] Ownership (app / platform / shared) is correct
+- [ ] No secret/PII slipped past the redact gate
+
+### Provenance
+See `.provenance/scan.yaml` and each artifact's `provenance` block.

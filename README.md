@@ -9,8 +9,9 @@ role*) reads code and emits *neutral* artifacts; the deterministic, security-cri
 (rendering alerts to your tools, schema validation, secret redaction, scaffolding) is done by the
 `latent-sre` Python engine in CI.
 
-> **Status:** PR1 — the contract + security core (engine, schemas, docs, exemplar skills). The full
-> 17-skill suite lands in later PRs (see `docs/` and the issue tracker).
+> **Status:** PR2 — the end-to-end publish path (assemble a complete, hardened `SRE-<service>` repo
+> from neutral artifacts) on top of the PR1 contract + security core. The full skill suite lands in
+> later PRs — see [`docs/roadmap.md`](docs/roadmap.md).
 
 ## What it produces
 
@@ -35,15 +36,22 @@ from a hostile target repo. See `docs/security.md` and `docs/ownership-boundary.
 `latent-sre` — a Python package (the deterministic surface CI/agents invoke):
 
 ```
-latent-sre validate <dir>            # schema-validate artifacts (governance fields + field allow-lists)
+latent-sre assemble <scan-dir>       # scan artifacts -> populated, validated, redacted SRE-<service> tree
+latent-sre validate <path...>        # schema-validate artifacts (--schema-dir to use vendored schemas)
 latent-sre render-adapters <intent>  # neutral AlertIntent -> per-tool configs (sandboxed, sentinel-guarded)
-latent-sre redact <path>             # fail-closed secret/PII gate
-latent-sre scaffold <dir> --name <s> # SRE-<service> skeleton with vendored, pinned schemas
+latent-sre render-runbook <spec>     # neutral RunbookSpec -> Markdown runbook (sandboxed)
+latent-sre redact <path...>          # fail-closed secret/PII gate
+latent-sre scaffold <dir> --name <s> # hardened SRE-<service> skeleton (vendored schemas, own CI, CODEOWNERS)
 latent-sre app-names <repo>          # deployable services (monorepo fan-out, capped)
 latent-sre mermaid <deps.yaml>       # dependency graph (untrusted labels sanitized)
 latent-sre hash-diff <path>          # normalized content hash (clobber-protection)
 latent-sre scan-state <path> --skill # resumable checkpoint
 ```
+
+`assemble` is the deterministic core of the publish role: it scaffolds a hardened repo, copies the
+neutral metadata, renders the alert adapters + runbooks + dependency diagram, then re-runs validation
+(against the *vendored* schemas) and the fail-closed redact gate. Opening the cross-repo PR is the
+only step left to the credentialed publish role. See [`docs/publish-path.md`](docs/publish-path.md).
 
 Develop & test the engine:
 

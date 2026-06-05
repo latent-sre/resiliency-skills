@@ -8,7 +8,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, appnames, hashdiff, mermaid, redact, render, scaffold, scanstate, validate
+from . import (
+    __version__, appnames, assemble, hashdiff, mermaid, redact, render, runbook, scaffold,
+    scanstate, validate,
+)
 
 
 def _cmd_redact(a) -> int:
@@ -27,8 +30,11 @@ def _cmd_redact(a) -> int:
 
 
 def _cmd_validate(a) -> int:
-    target = Path(a.path)
-    problems = validate.validate_tree(target) if target.is_dir() else validate.validate_file(target)
+    schema_dir = Path(a.schema_dir) if a.schema_dir else validate.SCHEMA_DIR
+    problems = []
+    for path in a.path:
+        t = Path(path)
+        problems += validate.validate_tree(t, schema_dir) if t.is_dir() else validate.validate_file(t, schema_dir)
     if problems:
         print(f"validate: {len(problems)} problem(s):", file=sys.stderr)
         for p in problems:
@@ -43,6 +49,27 @@ def _cmd_render(a) -> int:
     for w in written:
         print(w)
     return 0
+
+
+def _cmd_render_runbook(a) -> int:
+    print(runbook.render_runbook_file(a.spec, a.out))
+    return 0
+
+
+def _cmd_assemble(a) -> int:
+    res = assemble.assemble(a.scan_dir, a.out, a.service)
+    for w in res.written:
+        print(w)
+    print(f"assemble: {res.service} -> {res.root} ({len(res.written)} files)")
+    if res.validation:
+        print(f"  validation problems ({len(res.validation)}):", file=sys.stderr)
+        for v in res.validation:
+            print(f"    {v}", file=sys.stderr)
+    if res.secrets:
+        print(f"  secret findings ({len(res.secrets)}):", file=sys.stderr)
+        for s in res.secrets:
+            print(f"    {s}", file=sys.stderr)
+    return 0 if res.ok else 1
 
 
 def _cmd_scaffold(a) -> int:
@@ -81,11 +108,20 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("path", nargs="+"); s.set_defaults(fn=_cmd_redact)
 
     s = sub.add_parser("validate", help="schema-validate artifacts")
-    s.add_argument("path"); s.set_defaults(fn=_cmd_validate)
+    s.add_argument("path", nargs="+")
+    s.add_argument("--schema-dir", default=None, help="validate against a vendored schema dir")
+    s.set_defaults(fn=_cmd_validate)
 
     s = sub.add_parser("render-adapters", help="render a neutral AlertIntent to tool configs")
     s.add_argument("intent"); s.add_argument("--out", required=True)
     s.add_argument("--targets", nargs="*"); s.set_defaults(fn=_cmd_render)
+
+    s = sub.add_parser("render-runbook", help="render a neutral RunbookSpec to Markdown")
+    s.add_argument("spec"); s.add_argument("--out", required=True); s.set_defaults(fn=_cmd_render_runbook)
+
+    s = sub.add_parser("assemble", help="assemble scan artifacts into a populated SRE-<service> tree")
+    s.add_argument("scan_dir"); s.add_argument("--out", required=True)
+    s.add_argument("--service", default=None); s.set_defaults(fn=_cmd_assemble)
 
     s = sub.add_parser("scaffold", help="create an SRE-<service> skeleton")
     s.add_argument("out"); s.add_argument("--name", required=True); s.set_defaults(fn=_cmd_scaffold)

@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: {{ service }}
+  description: SRE knowledge base for {{ service }} (AI-drafted, needs human review)
+  tags: [sre, ai-drafted, needs-human-review]
+  annotations:
+    latent-sre/generated-by: latent-sre {{ version }}
+spec:
+  type: service
+  lifecycle: production
+  owner: REPLACE_ME__owning_team
