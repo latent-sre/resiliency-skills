@@ -1,0 +1,6 @@
+# Hostile PCF manifest: an app name crafted to break Mermaid/JSON if not sanitized.
+applications:
+  - name: 'evil"];}-->`$(whoami)'
+    instances: 1
+    routes:
+      - route: checkout.example.com

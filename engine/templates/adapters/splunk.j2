@@ -1,0 +1,11 @@
+# Splunk savedsearches.conf stanza (TEMPLATE — needs-config).
+# REPLACE_ME sentinels FAIL LOUD: this will not run until index/sourcetype are set for your org.
+[{{ name | sanitize }}]
+search = {{ query | sanitize }}
+# target index (must be set): {{ index | sanitize }}
+dispatch.earliest_time = -{{ window | sanitize }}
+alert.severity = {{ severity | sanitize }}
+alert.track = 1
+action.lookup = 0
+# ownership: {{ ownership | sanitize }}
+# runbook: {{ runbook | sanitize }}

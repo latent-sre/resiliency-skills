@@ -1,0 +1,70 @@
+# Security model
+
+The system reads **untrusted developer repositories** and publishes to a separate knowledge repo.
+The whole design assumes a target repo may be hostile (prompt injection, planted secrets, manifests
+crafted to trigger mass repo creation). Controls below are listed with the threat each addresses.
+
+## Threat model (summary)
+
+| # | Threat | Primary control |
+|---|--------|-----------------|
+| T1 | Prompt injection from target content (code/README/`AGENTS.md`/issues) | Two-role split; target content is **data, never instructions**; `chat.useAgentsMdFile:false` |
+| T2 | Credential theft / write to an arbitrary repo | Scan role has **no terminal and no write token**; publish credential scoped to `latent-sre/SRE-*` only, lives only in CI |
+| T3 | Secrets/PII leaking into the published repo | **Fail-closed** `latent-sre redact` gate + independent OSS scanner (gitleaks/trufflehog) on the publish path |
+| T4 | Output that silently targets the wrong live system | `REPLACE_ME__` **sentinels** for connection-critical fields; `unverified-against-live: true` |
+| T5 | Adapter-template injection via attacker-controlled names/queries | Jinja2 **SandboxedEnvironment** + per-format escaping (`tojson`/`sanitize`); JSON adapters re-parsed in tests |
+| T6 | Mass repo creation from a malicious monorepo manifest | `app-names` **fan-out cap**; above the cap requires human confirmation |
+| T7 | Supply-chain (typosquat / poisoned dependency of the engine) | Name registered defensively; deps pinned by hash (`--require-hashes`); actions pinned by SHA |
+| T8 | Tampered/over-trusted AI output | Required governance block (`needs-human-review: true`) enforced by schema; humans review every PR |
+
+## The role boundary (T1, T2)
+
+Two roles that **never share a context**:
+
+- **Scan role** — read-only Copilot agent. Reads the target, reasons, and writes only *neutral
+  artifacts* locally. No terminal, no network, no write credential. Governed by
+  `.github/copilot-instructions.md`.
+- **Publish role** — CI + a publish step holding a credential scoped only to `latent-sre/SRE-*`. Runs
+  the deterministic engine and opens a PR into the `SRE-<service>` repo.
+
+Because the agent that ingests hostile text never holds the write credential, a successful injection
+has nothing to steal and nowhere to write. See `docs/ownership-boundary.md`.
+
+## Precondition: do not auto-load the target's instructions (T1)
+
+VS Code can auto-inject a repo's `AGENTS.md`/instruction files into the agent. Operators MUST set
+`chat.useAgentsMdFile: false` (and disable repo-instruction auto-load) so a target's `AGENTS.md`
+is treated as **data**. The fixture `examples/malicious/AGENTS.md` exists to exercise this.
+
+## Fail-closed secret/PII gate (T3)
+
+`latent_sre/redact.py` blocks (non-zero exit) on any plausible secret rather than emitting
+best-effort. Three rule families — known patterns (cloud keys, VCS/chat tokens, JWTs, PEM keys,
+credentialed URIs), Shannon entropy ≥ 4.0 over opaque tokens ≥ 20 chars, and secret-ish
+`key: value` shapes — with an auditable escape hatch (`# latent-sre:allow <reason>` or a
+`.latent-sre-allow` file). Findings never echo the full secret. A **second, independent** OSS
+scanner runs on the publish path so a gap in one is caught by the other. This is defense-in-depth and
+holds whether or not GHAS push-protection is enabled on the org (see `setup-and-permissions.md`).
+
+## Sentinels & unverified output (T4)
+
+The engine cannot know your org's Splunk index, Wavefront metric, or AppDynamics application, so it
+emits `REPLACE_ME__<field>` sentinels for those connection-critical fields. An accidental apply
+**fails loud** instead of silently pointing at the wrong system. All scan-derived alerts carry
+`unverified-against-live: true` until a human validates them against a live signal.
+
+## Deterministic, sandboxed rendering (T5)
+
+Rendering a neutral `AlertIntent` to tool configs runs in a Jinja2 `SandboxedEnvironment`. Outputs
+are config formats, not HTML, so values are escaped per-format: `tojson` for JSON/YAML scalars,
+`sanitize` (strip newlines/control chars, length-cap) for line-oriented configs (Splunk `.conf`,
+Wavefront). Tests feed a hostile service name and re-parse the JSON adapter output to prove no
+structural break-out.
+
+## Supply chain (T7)
+
+The `latent-sre` distribution name is registered defensively to prevent squatting. Runtime
+dependencies are pinned by hash via `uv.lock` and installed with `--require-hashes` at the
+consumption points; GitHub Actions are pinned to full commit SHAs (Renovate manages bumps). The
+`SRE-<service>` template vendors the exact schema set + engine version it was generated with under
+`.sre/` (see `docs/versioning.md`).

@@ -1,0 +1,15 @@
+apiVersion: sre.latent-sre/v1
+kind: Criticality
+service: checkout
+tier: tier1
+businessCriticality: high
+dataClassification: [pii, confidential]
+source: inferred
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: assess-criticality-and-data
+ownership: app
+confidence: medium
+needs-human-review: true

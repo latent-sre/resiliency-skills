@@ -1,0 +1,38 @@
+# Messaging / async dependency signatures. Detecting a broker client implies a queue dependency
+# (direction inferred from producer vs consumer usage) and usually a resiliency concern
+# (retries, DLQ, idempotency) for the runbook/resiliency skills.
+apiVersion: sre.latent-sre/v1
+kind: SignatureSet
+domain: messaging
+
+signatures:
+  - id: kafka
+    dependencyKind: queue
+    confidence: high
+    anyOf:
+      - file: pom.xml
+        contains: "spring-kafka"
+      - file: package.json
+        jsonHasDependency: kafkajs
+      - file: requirements.txt
+        contains: "confluent-kafka"
+    resiliencySignals: [consumer-group, retry-topic, dead-letter-topic]
+
+  - id: rabbitmq
+    dependencyKind: queue
+    confidence: high
+    anyOf:
+      - file: pom.xml
+        contains: "spring-rabbit"
+      - file: package.json
+        jsonHasDependency: amqplib
+    resiliencySignals: [ack-mode, dlx, prefetch]
+
+  - id: aws-sqs
+    dependencyKind: queue
+    confidence: medium
+    anyOf:
+      - anyFile: true
+        contains: "sqs"          # low-signal; pair with an AWS SDK import to raise confidence
+    runtimeBinding: not-observable-from-repo
+    resiliencySignals: [visibility-timeout, redrive-policy]

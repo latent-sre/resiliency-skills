@@ -1,0 +1,10 @@
+# Wavefront alert (TEMPLATE — needs-config). REPLACE_ME sentinels fail loud until the metric is set.
+name: {{ name | tojson }}
+condition: {{ query | tojson }}
+# target metric (must be set): {{ metric | tojson }}
+severity: {{ severity | tojson }}
+minutes: {{ window | tojson }}
+tags:
+  - ownership:{{ ownership | sanitize }}
+runbookLinks:
+  - {{ runbook | tojson }}

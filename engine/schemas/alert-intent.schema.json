@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/alert-intent.schema.json",
+  "title": "AlertIntent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "AlertIntent" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "service"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+        "service": { "type": "string" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "repo": { "type": "string" }, "commit": { "type": "string" }, "path": { "type": "string" } }
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "condition", "severity"],
+      "properties": {
+        "signal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source"],
+          "properties": {
+            "type": { "enum": ["log", "metric", "trace", "synthetic"] },
+            "source": { "enum": ["splunk", "wavefront", "appdynamics", "thousandeyes", "otel", "grafana", "prometheus"] },
+            "query": { "type": "string" },
+            "index": { "type": "string" },
+            "metric": { "type": "string" },
+            "app": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "condition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["comparator", "threshold"],
+          "properties": {
+            "comparator": { "enum": [">", ">=", "<", "<=", "==", "!="] },
+            "threshold": { "type": ["number", "string"] },
+            "window": { "type": "string" },
+            "occurrences": { "type": "integer" }
+          }
+        },
+        "burnRate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "slo": { "type": "string" }, "shortWindow": { "type": "string" },
+            "longWindow": { "type": "string" }, "factor": { "type": "number" }
+          }
+        },
+        "severity": { "enum": ["sev1", "sev2", "sev3"] },
+        "for": { "type": "string" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "links": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "runbook": { "type": "string" }, "slo": { "type": "string" } }
+        },
+        "renderTargets": {
+          "type": "array",
+          "items": { "enum": ["splunk", "wavefront", "appdynamics", "thousandeyes", "grafana", "prometheus"] }
+        },
+        "unverified-against-live": { "type": "boolean" }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "$ref": "#/$defs/ownership" },
+    "confidence": { "$ref": "#/$defs/confidence" },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

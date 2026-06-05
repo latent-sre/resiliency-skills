@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/criticality.schema.json",
+  "title": "Criticality",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "service", "tier", "dataClassification", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "Criticality" },
+    "service": { "type": "string" },
+    "tier": { "enum": ["tier0", "tier1", "tier2", "tier3", "unknown"] },
+    "businessCriticality": { "enum": ["critical", "high", "medium", "low", "unknown"] },
+    "dataClassification": {
+      "type": "array",
+      "items": { "enum": ["public", "internal", "confidential", "pii", "pci", "unknown"] }
+    },
+    "source": { "enum": ["catalog", "human-input", "inferred"] },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

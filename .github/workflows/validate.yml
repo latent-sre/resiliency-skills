@@ -1,0 +1,52 @@
+name: validate
+
+# Contract gate for THIS repo: engine tests + schema validation + the fail-closed secret gate +
+# SKILL.md frontmatter lint. Least privilege — read-only token, no secrets exposed to the job.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  engine-and-contract:
+    runs-on: ubuntu-latest
+    steps:
+      # Pin third-party actions to a full commit SHA in production (Renovate/Dependabot manages the
+      # bump). Tags shown here for readability.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install engine
+        run: python -m pip install ./engine pytest
+
+      - name: Unit tests (incl. malicious-secret + injection-safety fixtures)
+        run: python -m pytest engine -q
+
+      - name: Schema-validate golden artifacts
+        run: python -m latent_sre.cli validate examples/golden
+        env:
+          PYTHONPATH: engine/src
+
+      - name: Fail-closed secret/PII gate over content dirs
+        # engine/ is intentionally excluded: it legitimately contains secret *patterns* (the detector).
+        run: python -m latent_sre.cli redact examples lib docs
+        env:
+          PYTHONPATH: engine/src
+
+      - name: Lint SKILL.md frontmatter
+        run: python tools/lint_skills.py
+
+  # Defense-in-depth: a second, independent OSS secret scanner. Enable on the publish pipeline and in
+  # each SRE-<service> repo. Kept opt-in here so this repo's CI has no external-action/licensing
+  # dependency; `latent-sre redact` above is the primary fail-closed gate.
+  #
+  # secret-scan-second-gate:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: gitleaks/gitleaks-action@<pin-to-sha>   # or trufflehog

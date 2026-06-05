@@ -1,0 +1,47 @@
+apiVersion: sre.latent-sre/v1
+kind: AlertIntent
+metadata:
+  name: checkout-high-error-rate
+  service: checkout
+  source:
+    repo: github.com/acme/checkout
+    commit: 9d779ba
+    path: src/app.py
+spec:
+  signal:
+    type: metric
+    source: prometheus
+    query: 'rate(http_requests_total{code=~"5.."}[5m]) > 0.05'
+    description: 'checkout 5xx error rate'
+  condition:
+    comparator: '>'
+    threshold: 0.05
+    window: 5m
+    occurrences: 2
+  burnRate:
+    slo: slos/checkout-availability.openslo.yaml
+    shortWindow: 5m
+    longWindow: 1h
+    factor: 14.4
+  severity: sev2
+  for: 10m
+  labels:
+    team: payments
+    tier: tier1
+  annotations:
+    summary: 'Checkout 5xx error rate is high'
+    description: 'Error budget burning fast on the checkout path'
+  links:
+    runbook: runbooks/checkout-high-error-rate.md
+    slo: slos/checkout-availability.openslo.yaml
+  renderTargets: [prometheus, grafana, splunk, wavefront, appdynamics]
+  unverified-against-live: true
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: generate-alerts
+  skillVersion: 0.1.0
+ownership: app
+confidence: medium
+needs-human-review: true
