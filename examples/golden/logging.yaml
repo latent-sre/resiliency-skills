@@ -1,0 +1,17 @@
+apiVersion: sre.latent-sre/v1
+kind: Logging
+service: checkout
+spec:
+  framework: logback
+  structured: true
+  levels: [INFO, WARN, ERROR]
+  sinks: [stdout, splunk]
+  correlationId: true
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: assess-logging
+ownership: app
+confidence: medium
+needs-human-review: true

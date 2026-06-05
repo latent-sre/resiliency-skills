@@ -17,7 +17,10 @@ from pathlib import Path
 from . import mermaid, redact, render, runbook, scaffold, yamlio
 from . import validate as validate_mod
 
-_METADATA_KINDS = {"Criticality", "Dependencies", "PcfDeployment"}
+_METADATA_KINDS = {
+    "Criticality", "Dependencies", "PcfDeployment", "TechStack", "Architecture", "Infrastructure",
+    "ApiContracts", "Messaging", "Jobs", "Resiliency", "Logging", "Delivery",
+}
 
 
 @dataclass

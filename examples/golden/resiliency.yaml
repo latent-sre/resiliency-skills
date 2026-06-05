@@ -1,0 +1,21 @@
+apiVersion: sre.latent-sre/v1
+kind: Resiliency
+service: checkout
+spec:
+  patterns:
+    - kind: circuit-breaker
+      target: payments-api
+      observedIn: code
+    - kind: retry
+      target: postgres-main
+      observedIn: config
+  gaps:
+    - no timeout configured on the payments-api client
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: assess-resiliency
+ownership: app
+confidence: low
+needs-human-review: true

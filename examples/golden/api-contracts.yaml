@@ -1,0 +1,17 @@
+apiVersion: sre.latent-sre/v1
+kind: ApiContracts
+service: checkout
+spec:
+  exposes:
+    - name: checkout-api
+      protocol: rest
+      version: v1
+      specPath: openapi/checkout.yaml
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: map-api-contracts
+ownership: app
+confidence: medium
+needs-human-review: true

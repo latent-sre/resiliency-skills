@@ -1,0 +1,17 @@
+apiVersion: sre.latent-sre/v1
+kind: TechStack
+service: checkout
+spec:
+  languages: [java]
+  frameworks: [spring-boot]
+  runtimes: [jvm-17]
+  buildTools: [maven]
+  packageManagers: [maven]
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: assess-tech-stack
+ownership: app
+confidence: high
+needs-human-review: true

@@ -8,8 +8,31 @@ artifactKinds:
   - Criticality
   - Dependencies
   - AlertIntent
-  # later PRs: TechStack, Architecture, PcfDeployment, Infrastructure, ApiContracts, Messaging,
-  # Jobs, Resiliency, Logging, Delivery, ObservabilityCoverage, Slo, Dashboard, Runbook
+  - RunbookSpec
+  - PcfDeployment
+  - TechStack
+  - Architecture
+  - Infrastructure
+  - ApiContracts
+  - Messaging
+  - Jobs
+  - Resiliency
+  - Logging
+  - Delivery
+  # later PRs: ObservabilityCoverage, Slo, Dashboard
+
+architecture:
+  style: [monolith, modular-monolith, microservice, serverless, unknown]
+
+infrastructure:
+  datastoreKind: [postgres, mysql, mongodb, dynamodb, redis, cassandra, elasticsearch, s3, other]
+
+resiliency:
+  pattern: [retry, circuit-breaker, timeout, bulkhead, fallback, rate-limit, idempotency]
+  observedIn: [code, config, inferred]
+
+delivery:
+  strategy: [rolling, blue-green, canary, recreate, unknown]
 
 governance:
   ownership: [app, platform, shared]          # who owns the concern (app team vs platform vs shared)

@@ -11,8 +11,8 @@ chain.** A working vertical slice is more valuable than many half-wired skills.
 | PR | Theme | State |
 |----|-------|-------|
 | PR1 | Contract + security core | ✅ merged (#1) |
-| PR2 | End-to-end publish path | 🚧 in progress |
-| PR3 | Skill suite — metadata breadth | planned |
+| PR2 | End-to-end publish path | ✅ pushed (stacked) |
+| PR3 | Skill suite — metadata breadth | 🚧 in progress (stacked on PR2) |
 | PR4 | Observability, SLOs & dashboards | planned |
 | PR5 | Supply-chain & release hardening | planned |
 | PR6 | Orchestration & scale | planned |
@@ -40,11 +40,12 @@ already emit, without yet adding new skills.
   `latent-sre/SRE-*`-scoped credential; the engine only does the deterministic assembly.
 - Tests for scaffold completeness + runbook rendering + assembly; docs updates.
 
-## PR3 — Skill suite, metadata breadth
+## PR3 — Skill suite, metadata breadth 🚧
 
 The remaining metadata skills, each as a thin `SKILL.md` + a JSON Schema + a golden example:
 TechStack, Architecture, Infrastructure, ApiContracts, Messaging, Jobs, Resiliency, Logging,
-Delivery. Extends `lib/signatures/*`. No new engine surface — they reuse validate/redact/assemble.
+Delivery. No new engine surface — they reuse validate/redact/assemble; `assemble` now dispatches
+these kinds into `metadata/`, and they validate against the vendored schemas in an assembled repo.
 
 ## PR4 — Observability, SLOs & dashboards
 
