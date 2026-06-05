@@ -11,6 +11,7 @@ deterministic, security-critical transforms in CI:
     hash-diff        normalized content hashing for clobber-protection
     mermaid          dependency graph (untrusted labels escaped)
     app-names        list deployable services in a repo (monorepo fan-out, capped)
+    plan             per-service scan plan: canonical pipeline x fan-out, with resume status
 """
 
 __version__ = "0.1.0"

@@ -9,9 +9,10 @@ role*) reads code and emits *neutral* artifacts; the deterministic, security-cri
 (rendering alerts to your tools, schema validation, secret redaction, scaffolding) is done by the
 `latent-sre` Python engine in CI.
 
-> **Status:** PR2 — the end-to-end publish path (assemble a complete, hardened `SRE-<service>` repo
-> from neutral artifacts) on top of the PR1 contract + security core. The full skill suite lands in
-> later PRs — see [`docs/roadmap.md`](docs/roadmap.md).
+> **Status:** the full vertical slice is in review as a stack on top of the PR1 contract + security
+> core — end-to-end publish path (PR2), the 18-skill suite (PR3), observability/SLOs/dashboards (PR4),
+> supply-chain & release hardening (PR5), and orchestration (PR6). See
+> [`docs/roadmap.md`](docs/roadmap.md).
 
 ## What it produces
 
@@ -43,6 +44,7 @@ latent-sre render-runbook <spec>     # neutral RunbookSpec -> Markdown runbook (
 latent-sre redact <path...>          # fail-closed secret/PII gate
 latent-sre scaffold <dir> --name <s> # hardened SRE-<service> skeleton (vendored schemas, own CI, CODEOWNERS)
 latent-sre app-names <repo>          # deployable services (monorepo fan-out, capped)
+latent-sre plan <repo>               # per-service scan plan: canonical pipeline x fan-out, resumable
 latent-sre mermaid <deps.yaml>       # dependency graph (untrusted labels sanitized)
 latent-sre hash-diff <path>          # normalized content hash (clobber-protection)
 latent-sre scan-state <path> --skill # resumable checkpoint

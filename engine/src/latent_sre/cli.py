@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from . import (
-    __version__, appnames, assemble, dashboard, hashdiff, mermaid, redact, render, runbook,
+    __version__, appnames, assemble, dashboard, hashdiff, mermaid, plan, redact, render, runbook,
     scaffold, scanstate, validate,
 )
 
@@ -104,6 +104,18 @@ def _cmd_scanstate(a) -> int:
     return 0
 
 
+def _cmd_plan(a) -> int:
+    import json
+    p = plan.make_plan(a.repo, a.pipeline, a.scan_state)
+    print(json.dumps(p, indent=2))
+    if p["requiresHumanConfirm"]:
+        f = p["fanout"]
+        print(f"plan: fan-out {f['total']} exceeds cap {f['cap']} — human confirmation required",
+              file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="latent-sre", description="SRE skills deterministic engine")
     p.add_argument("--version", action="version", version=f"latent-sre {__version__}")
@@ -145,6 +157,12 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("scan-state", help="read a scan-state record")
     s.add_argument("path"); s.add_argument("--skill", required=True); s.set_defaults(fn=_cmd_scanstate)
+
+    s = sub.add_parser("plan", help="emit a per-service scan plan (pipeline x fan-out + resume status)")
+    s.add_argument("repo")
+    s.add_argument("--pipeline", default=None, help="override the bundled pipeline.yaml")
+    s.add_argument("--scan-state", default=None, help="annotate skill status from a scan-state.yaml")
+    s.set_defaults(fn=_cmd_plan)
 
     args = p.parse_args(argv)
     return args.fn(args)

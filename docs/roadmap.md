@@ -14,8 +14,8 @@ chain.** A working vertical slice is more valuable than many half-wired skills.
 | PR2 | End-to-end publish path | ✅ pushed (stacked) |
 | PR3 | Skill suite — metadata breadth | ✅ pushed (stacked) |
 | PR4 | Observability, SLOs & dashboards | ✅ pushed (stacked) |
-| PR5 | Supply-chain & release hardening | 🚧 in progress (stacked on PR4) |
-| PR6 | Orchestration & scale | planned |
+| PR5 | Supply-chain & release hardening | ✅ pushed (stacked) |
+| PR6 | Orchestration & scale | 🚧 in progress (stacked on PR5) |
 
 ## PR1 — Contract + security core ✅
 
@@ -65,15 +65,22 @@ Publishing release workflow; an offline wheel bundler for air-gapped PCF; and `S
 SHA pinning is delegated to Renovate rather than hand-typed, since fabricated SHAs would be worse
 than tags.)
 
-## PR6 — Orchestration & scale
+## PR6 — Orchestration & scale 🚧
 
-Full `sre-analyst` sequencing across every skill, monorepo fan-out UX (above the cap → human
-confirm), resumability hardening, and an end-to-end integration test that scans a sample target repo
-and assembles its `SRE-<service>` output.
+The orchestration surface that ties the suite together:
+
+- **`latent-sre plan <repo>`** — emits a per-service `ScanPlan` from `engine/pipeline.yaml` (the
+  canonical, ordered pipeline covering **all 18 skills**, kept in sync by a test) × the fan-out
+  discovery. Above the cap it sets `requiresHumanConfirm` and exits non-zero (stop and ask a human —
+  never mass-create). `--scan-state` annotates each skill done/pending for **resumable** scans.
+- **`sre-analyst` agent** rewritten to follow `plan` and the four scan phases (classify → map →
+  assess → generate); publish stays with CI.
+- **`examples/sample-target/`** fixture + an **integration test** exercising the full deterministic
+  chain: discover → plan → assemble a hardened `SRE-<service>` repo.
 
 ## Open preconditions (not blocking, but needed before production)
 
-- `latent-sre` PyPI / internal-mirror coordinates (+ offline wheel for air-gapped PCF CI).
+- `latent-sre` PyPI / internal-mirror coordinates (offline wheel bundler shipped in PR5).
 - GitHub Advanced Security push-protection status on the `latent-sre` org.
 - The pinned orchestrator model (currently `PINNED_MODEL_PLACEHOLDER`).
 
