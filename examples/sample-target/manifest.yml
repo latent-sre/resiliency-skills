@@ -1,0 +1,8 @@
+# Sample PCF manifest for the engine integration test: two deployable services → fan-out of 2.
+applications:
+  - name: checkout
+    memory: 1G
+    instances: 2
+  - name: payments
+    memory: 512M
+    instances: 3

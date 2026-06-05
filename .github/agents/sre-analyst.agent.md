@@ -31,13 +31,22 @@ are the **scan role**: read-only, no terminal, no network, no write credential. 
 
 ## Sequence
 
-1. **Discover services** — determine deployable units (the engine's `app-names` enforces the
-   monorepo fan-out cap; above the cap, stop and ask a human — never mass-create).
-2. **Classify** — tech stack & ownership using `lib/signatures/*` and `lib/taxonomy.yaml`.
-3. **Criticality & data** — emit a `Criticality` artifact (tier, data classification).
-4. **Dependencies** — emit a `Dependencies` artifact (kind, direction, runtimeBinding).
-5. **Alerts** — emit neutral `AlertIntent` artifacts (the engine renders per-tool configs).
-6. **Checkpoint** — record progress so a long scan is resumable; never overwrite human edits.
+Start with `latent-sre plan <repo>`. It discovers services (fan-out is **capped** — above the cap it
+sets `requiresHumanConfirm` and exits non-zero, so you **stop and ask a human; never mass-create**)
+and emits the canonical, ordered pipeline (`engine/pipeline.yaml`) for each service:
+
+1. **classify** — `assess-tech-stack`, `assess-criticality-and-data` (use `lib/signatures/*` and
+   `lib/taxonomy.yaml`).
+2. **map** — `map-architecture`, `map-infrastructure`, `map-pcf-application`, `map-dependencies`,
+   `map-api-contracts`, `map-messaging`, `map-jobs`, `map-delivery`.
+3. **assess** — `assess-resiliency`, `assess-logging`, `assess-observability-coverage`.
+4. **generate** — `generate-slos`, `generate-alerts`, `generate-dashboards`, `generate-runbooks`
+   (neutral artifacts only; the engine renders per-tool configs).
+
+Phases run in order; skills within a phase are independent. After each skill, **checkpoint** to
+`.sre-scan/<service>/scan-state.yaml` so a long or interrupted scan resumes where it left off
+(`latent-sre plan --scan-state …` marks each skill done/pending); never overwrite human edits. The
+**publish** phase (`publish-sre-repo`) is the publish role (CI), not you.
 
 ## Hand-off
 

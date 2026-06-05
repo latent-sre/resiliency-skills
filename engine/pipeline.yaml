@@ -1,0 +1,43 @@
+# Canonical scan pipeline: the ordered phases the sre-analyst runs over each discovered service.
+# `latent-sre plan` reads this together with app-names to emit a per-service ScanPlan. Phases run in
+# order; skills within a phase have no ordering dependency on one another. Every SKILL.md under
+# .github/skills/ must appear here exactly once (enforced by engine/tests/test_plan.py).
+apiVersion: sre.latent-sre/v1
+kind: Pipeline
+phases:
+  - name: discover
+    description: Enumerate deployable services (engine app-names; monorepo fan-out is capped).
+    skills: []
+  - name: classify
+    description: Tech stack, ownership, criticality and data classification.
+    skills:
+      - assess-tech-stack
+      - assess-criticality-and-data
+  - name: map
+    description: Architecture, platform, dependencies and interface surface.
+    skills:
+      - map-architecture
+      - map-infrastructure
+      - map-pcf-application
+      - map-dependencies
+      - map-api-contracts
+      - map-messaging
+      - map-jobs
+      - map-delivery
+  - name: assess
+    description: Resiliency posture, logging and observability coverage.
+    skills:
+      - assess-resiliency
+      - assess-logging
+      - assess-observability-coverage
+  - name: generate
+    description: Neutral SLOs, alert intents, dashboards and runbooks.
+    skills:
+      - generate-slos
+      - generate-alerts
+      - generate-dashboards
+      - generate-runbooks
+  - name: publish
+    description: Assemble + open a PR into SRE-<service> (publish role / CI, not the scan role).
+    skills:
+      - publish-sre-repo

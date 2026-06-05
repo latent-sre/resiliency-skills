@@ -13,9 +13,9 @@ chain.** A working vertical slice is more valuable than many half-wired skills.
 | PR1 | Contract + security core | ✅ merged (#1) |
 | PR2 | End-to-end publish path | ✅ pushed (stacked) |
 | PR3 | Skill suite — metadata breadth | ✅ pushed (stacked) |
-| PR4 | Observability, SLOs & dashboards | 🚧 in progress (stacked on PR3) |
-| PR5 | Supply-chain & release hardening | planned |
-| PR6 | Orchestration & scale | planned |
+| PR4 | Observability, SLOs & dashboards | ✅ pushed (stacked) |
+| PR5 | Supply-chain & release hardening | ✅ pushed (stacked) |
+| PR6 | Orchestration & scale | 🚧 in progress (stacked on PR5) |
 
 ## PR1 — Contract + security core ✅
 
@@ -56,22 +56,31 @@ injection-safe, with a `REPLACE_ME__grafana_datasource` sentinel). `assemble` no
 `slos/`, `Dashboard` → `dashboards/` (spec + rendered JSON), and `ObservabilityCoverage` → `metadata/`,
 all validated against the vendored schemas.
 
-## PR5 — Supply-chain & release hardening
+## PR5 — Supply-chain & release hardening 🚧
 
-Close the "documented but not enforced" gaps from PR1: generate `uv.lock` and switch CI to
-`--require-hashes`, pin all GitHub Actions by commit SHA, wire the OSS second secret scanner
-(gitleaks/trufflehog) into the publish gate, add Renovate, and publish an offline wheel for
-air-gapped PCF CI.
+Closes the "documented but not enforced" gaps from PR1: `uv.lock` + `requirements*.lock` with CI on
+`--require-hashes`; `renovate.json` pinning Action digests and maintaining locks; an independent OSS
+second secret gate (`detect-secrets`) in this repo's CI and the generated-repo template; a Trusted
+Publishing release workflow; an offline wheel bundler for air-gapped PCF; and `SECURITY.md`. (Real
+SHA pinning is delegated to Renovate rather than hand-typed, since fabricated SHAs would be worse
+than tags.)
 
-## PR6 — Orchestration & scale
+## PR6 — Orchestration & scale 🚧
 
-Full `sre-analyst` sequencing across every skill, monorepo fan-out UX (above the cap → human
-confirm), resumability hardening, and an end-to-end integration test that scans a sample target repo
-and assembles its `SRE-<service>` output.
+The orchestration surface that ties the suite together:
+
+- **`latent-sre plan <repo>`** — emits a per-service `ScanPlan` from `engine/pipeline.yaml` (the
+  canonical, ordered pipeline covering **all 18 skills**, kept in sync by a test) × the fan-out
+  discovery. Above the cap it sets `requiresHumanConfirm` and exits non-zero (stop and ask a human —
+  never mass-create). `--scan-state` annotates each skill done/pending for **resumable** scans.
+- **`sre-analyst` agent** rewritten to follow `plan` and the four scan phases (classify → map →
+  assess → generate); publish stays with CI.
+- **`examples/sample-target/`** fixture + an **integration test** exercising the full deterministic
+  chain: discover → plan → assemble a hardened `SRE-<service>` repo.
 
 ## Open preconditions (not blocking, but needed before production)
 
-- `latent-sre` PyPI / internal-mirror coordinates (+ offline wheel for air-gapped PCF CI).
+- `latent-sre` PyPI / internal-mirror coordinates (offline wheel bundler shipped in PR5).
 - GitHub Advanced Security push-protection status on the `latent-sre` org.
 - The pinned orchestrator model (currently `PINNED_MODEL_PLACEHOLDER`).
 

@@ -39,24 +39,31 @@ source/target org.
 ## Engine install (CI and local)
 
 ```bash
-python -m pip install ./engine           # local dev
-# CI / production: install from your index with hashes pinned:
-#   pip install --require-hashes -r requirements.lock
+python -m pip install ./engine                                  # local dev
+# CI / production (hash-pinned; see engine/uv.lock):
+python -m pip install --require-hashes -r engine/requirements-dev.lock
+python -m pip install --no-deps ./engine
+# Air-gapped (PCF): build a bundle on a connected host, then install offline:
+bash scripts/build-offline.sh vendor/
+python -m pip install --no-index --find-links vendor/ latent-sre
 ```
 
-**Open precondition (PR1):** confirm the PyPI/internal-mirror coordinates for `latent-sre`, and
-publish an **offline wheel** for air-gapped PCF CI runners.
+Locks are generated with `uv` (`uv lock` → `uv export`). The offline bundler is provided
+(`scripts/build-offline.sh`). **Open precondition:** confirm the PyPI/internal-mirror coordinates for
+publishing `latent-sre`.
 
 ## Secret-scanning posture
 
 `latent-sre redact` is **fail-closed** and runs in CI regardless of platform features. Independently,
 confirm whether **GitHub Advanced Security** push-protection is enabled on the `latent-sre` org:
 
-- **Enabled** → redact + push-protection + an OSS scanner = three layers.
-- **Not enabled** → redact + an OSS scanner (gitleaks/trufflehog) on the publish path are the gate;
-  still fail-closed.
+- **Enabled** → redact + push-protection + the `detect-secrets` second gate = three layers.
+- **Not enabled** → redact + the `detect-secrets` second gate (CI, `tools/second_secret_gate.py`)
+  are the gate; still fail-closed.
 
-**Open precondition (PR1):** confirm GHAS status so the publish pipeline is configured accordingly.
+The independent OSS second gate (`detect-secrets`) is now wired into CI here and in the generated
+`SRE-<service>` CI template (PR5). **Open precondition:** confirm GHAS status so the publish pipeline
+adds push-protection as a third layer where available.
 
 ## Orchestrator model
 
@@ -68,6 +75,7 @@ operator; it is intentionally left as a placeholder in-repo.
 
 - [ ] `chat.useAgentsMdFile: false` (and instruction auto-load disabled) on scan runners.
 - [ ] Publish credential scoped to `latent-sre/SRE-*` only, present only in publish CI.
-- [ ] `latent-sre` index coordinates confirmed + offline wheel for air-gapped CI.
-- [ ] GHAS push-protection status confirmed; OSS second scanner enabled on the publish path.
+- [ ] `latent-sre` index coordinates confirmed (offline bundler provided: `scripts/build-offline.sh`).
+- [ ] GHAS push-protection status confirmed (the `detect-secrets` second gate is already wired in CI).
+- [ ] Renovate enabled on the org so Action digests get pinned and locks maintained.
 - [ ] Orchestrator model pinned.

@@ -7,7 +7,7 @@ def test_scaffold_creates_hardened_skeleton(tmp_path):
     for rel in [
         "README.md", "catalog-info.yaml", ".github/CODEOWNERS",
         ".github/pull_request_template.md", ".github/workflows/validate.yml",
-        ".sre/version", ".gitignore", ".provenance/scan.yaml",
+        ".sre/version", ".gitignore", ".provenance/scan.yaml", "renovate.json",
     ]:
         assert (root / rel).is_file(), rel
     # vendored, pinned schemas + version

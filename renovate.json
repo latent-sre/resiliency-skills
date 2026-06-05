@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "// note": "Achieves the supply-chain hardening the workflows reference: pins every GitHub Action to a commit SHA, keeps the uv lockfiles fresh, and groups updates. Workflows keep readable tags; Renovate rewrites them to @<sha> # <tag> on its first run and maintains them thereafter.",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "pinDigests": true
+    },
+    {
+      "matchManagers": ["pep621"],
+      "groupName": "python dependencies"
+    }
+  ]
+}

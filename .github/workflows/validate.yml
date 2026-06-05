@@ -1,7 +1,7 @@
 name: validate
 
 # Contract gate for THIS repo: engine tests + schema validation + the fail-closed secret gate +
-# SKILL.md frontmatter lint. Least privilege — read-only token, no secrets exposed to the job.
+# an independent OSS second secret gate + SKILL.md lint. Least privilege — read-only token.
 on:
   pull_request:
   push:
@@ -14,39 +14,32 @@ jobs:
   engine-and-contract:
     runs-on: ubuntu-latest
     steps:
-      # Pin third-party actions to a full commit SHA in production (Renovate/Dependabot manages the
-      # bump). Tags shown here for readability.
+      # Actions are pinned to commit SHAs by Renovate (see renovate.json); tags shown for readability.
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install engine
-        run: python -m pip install ./engine pytest
+      - name: Install hash-pinned deps + engine
+        # Third-party deps are installed with --require-hashes from the uv-generated lock; the engine
+        # itself is installed --no-deps so nothing is resolved unpinned (supply-chain hardening).
+        run: |
+          python -m pip install --require-hashes -r engine/requirements-dev.lock
+          python -m pip install --no-deps ./engine
 
       - name: Unit tests (incl. malicious-secret + injection-safety fixtures)
         run: python -m pytest engine -q
 
       - name: Schema-validate golden artifacts
         run: python -m latent_sre.cli validate examples/golden
-        env:
-          PYTHONPATH: engine/src
 
-      - name: Fail-closed secret/PII gate over content dirs
-        # engine/ is intentionally excluded: it legitimately contains secret *patterns* (the detector).
+      - name: Fail-closed secret/PII gate (primary)
+        # engine/ and the lockfiles are intentionally excluded (they contain detector patterns /
+        # high-entropy hashes by design).
         run: python -m latent_sre.cli redact examples lib docs
-        env:
-          PYTHONPATH: engine/src
+
+      - name: Independent OSS second secret gate (detect-secrets)
+        run: python tools/second_secret_gate.py
 
       - name: Lint SKILL.md frontmatter
         run: python tools/lint_skills.py
-
-  # Defense-in-depth: a second, independent OSS secret scanner. Enable on the publish pipeline and in
-  # each SRE-<service> repo. Kept opt-in here so this repo's CI has no external-action/licensing
-  # dependency; `latent-sre redact` above is the primary fail-closed gate.
-  #
-  # secret-scan-second-gate:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: gitleaks/gitleaks-action@<pin-to-sha>   # or trufflehog

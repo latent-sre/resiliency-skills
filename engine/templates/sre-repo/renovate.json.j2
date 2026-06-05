@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "// note": "Keeps the generated SRE-{{ service }} repo current: pins GitHub Actions to commit SHAs and bumps the pinned latent-sre engine (.sre/version) as a reviewed PR, which re-vendors the schema contract.",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "pinDigests": true
+    }
+  ]
+}
