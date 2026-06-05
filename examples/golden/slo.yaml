@@ -1,0 +1,26 @@
+apiVersion: sre.latent-sre/v1
+kind: Slo
+service: checkout
+spec:
+  sli:
+    name: availability
+    type: ratio
+    source: prometheus
+    good: non-5xx responses
+    total: all responses
+    description: ratio of successful checkout requests
+  objectives:
+    - displayName: 99.9% availability over 30 days
+      target: 0.999
+      window: 30d
+  errorBudgetPolicy:
+    - page when 2% of the error budget is burned in 1h
+    - ticket when 10% of the error budget is burned in 24h
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: generate-slos
+ownership: app
+confidence: medium
+needs-human-review: true

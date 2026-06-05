@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/infrastructure.schema.json",
+  "title": "Infrastructure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "service", "spec", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "Infrastructure" },
+    "service": { "type": "string" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "compute": { "type": "array", "items": { "type": "string" } },
+        "datastores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "kind"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "enum": ["postgres", "mysql", "mongodb", "dynamodb", "redis", "cassandra", "elasticsearch", "s3", "other"] }
+            }
+          }
+        },
+        "caches": { "type": "array", "items": { "type": "string" } },
+        "networking": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

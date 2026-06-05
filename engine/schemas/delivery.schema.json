@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/delivery.schema.json",
+  "title": "Delivery",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "service", "spec", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "Delivery" },
+    "service": { "type": "string" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ci": { "type": "string" },
+        "pipeline": { "type": "array", "items": { "type": "string" } },
+        "strategy": { "enum": ["rolling", "blue-green", "canary", "recreate", "unknown"] },
+        "environments": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

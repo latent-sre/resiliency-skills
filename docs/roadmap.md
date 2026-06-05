@@ -11,9 +11,9 @@ chain.** A working vertical slice is more valuable than many half-wired skills.
 | PR | Theme | State |
 |----|-------|-------|
 | PR1 | Contract + security core | ✅ merged (#1) |
-| PR2 | End-to-end publish path | 🚧 in progress |
-| PR3 | Skill suite — metadata breadth | planned |
-| PR4 | Observability, SLOs & dashboards | planned |
+| PR2 | End-to-end publish path | ✅ pushed (stacked) |
+| PR3 | Skill suite — metadata breadth | ✅ pushed (stacked) |
+| PR4 | Observability, SLOs & dashboards | 🚧 in progress (stacked on PR3) |
 | PR5 | Supply-chain & release hardening | planned |
 | PR6 | Orchestration & scale | planned |
 
@@ -40,16 +40,21 @@ already emit, without yet adding new skills.
   `latent-sre/SRE-*`-scoped credential; the engine only does the deterministic assembly.
 - Tests for scaffold completeness + runbook rendering + assembly; docs updates.
 
-## PR3 — Skill suite, metadata breadth
+## PR3 — Skill suite, metadata breadth 🚧
 
 The remaining metadata skills, each as a thin `SKILL.md` + a JSON Schema + a golden example:
 TechStack, Architecture, Infrastructure, ApiContracts, Messaging, Jobs, Resiliency, Logging,
-Delivery. Extends `lib/signatures/*`. No new engine surface — they reuse validate/redact/assemble.
+Delivery. No new engine surface — they reuse validate/redact/assemble; `assemble` now dispatches
+these kinds into `metadata/`, and they validate against the vendored schemas in an assembled repo.
 
-## PR4 — Observability, SLOs & dashboards
+## PR4 — Observability, SLOs & dashboards 🚧
 
-`ObservabilityCoverage` (gap analysis), `Slo` (OpenSLO output), and `Dashboard` skills + schemas, plus
-the **dashboard renderer** (its input artifact is defined here, which is why it was not in PR2).
+`generate-slos` (`Slo`), `assess-observability-coverage` (`ObservabilityCoverage`), and
+`generate-dashboards` (`Dashboard`) skills + schemas + goldens, plus the **dashboard renderer**
+(`render-dashboard`: Dashboard → Grafana JSON, built by construction so it's valid JSON and
+injection-safe, with a `REPLACE_ME__grafana_datasource` sentinel). `assemble` now routes `Slo` →
+`slos/`, `Dashboard` → `dashboards/` (spec + rendered JSON), and `ObservabilityCoverage` → `metadata/`,
+all validated against the vendored schemas.
 
 ## PR5 — Supply-chain & release hardening
 

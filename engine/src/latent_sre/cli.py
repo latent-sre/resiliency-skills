@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 from . import (
-    __version__, appnames, assemble, hashdiff, mermaid, redact, render, runbook, scaffold,
-    scanstate, validate,
+    __version__, appnames, assemble, dashboard, hashdiff, mermaid, redact, render, runbook,
+    scaffold, scanstate, validate,
 )
 
 
@@ -53,6 +53,11 @@ def _cmd_render(a) -> int:
 
 def _cmd_render_runbook(a) -> int:
     print(runbook.render_runbook_file(a.spec, a.out))
+    return 0
+
+
+def _cmd_render_dashboard(a) -> int:
+    print(dashboard.render_dashboard_file(a.spec, a.out))
     return 0
 
 
@@ -118,6 +123,9 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("render-runbook", help="render a neutral RunbookSpec to Markdown")
     s.add_argument("spec"); s.add_argument("--out", required=True); s.set_defaults(fn=_cmd_render_runbook)
+
+    s = sub.add_parser("render-dashboard", help="render a neutral Dashboard to Grafana JSON")
+    s.add_argument("spec"); s.add_argument("--out", required=True); s.set_defaults(fn=_cmd_render_dashboard)
 
     s = sub.add_parser("assemble", help="assemble scan artifacts into a populated SRE-<service> tree")
     s.add_argument("scan_dir"); s.add_argument("--out", required=True)
