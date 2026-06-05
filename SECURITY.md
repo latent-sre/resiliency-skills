@@ -17,10 +17,6 @@ repro steps and impact. We aim to acknowledge within a few business days.
 - **Two independent secret gates.** The fail-closed `latent-sre redact` (primary) plus
   `detect-secrets` (independent OSS engine) both run in CI and in every generated `SRE-<service>`
   repo. A gap in one is caught by the other.
-- **Trusted Publishing.** Releases publish to PyPI via OIDC (no long-lived token) with build
-  attestations (`.github/workflows/release.yml`).
-- **Defensive name registration.** The `latent-sre` distribution name is reserved to prevent
-  typosquatting.
 - **Air-gapped installs.** `scripts/build-offline.sh` produces an offline wheel bundle (engine +
   hash-pinned deps) for PCF runners without egress.
 

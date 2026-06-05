@@ -60,8 +60,8 @@ all validated against the vendored schemas.
 
 Closes the "documented but not enforced" gaps from PR1: `uv.lock` + `requirements*.lock` with CI on
 `--require-hashes`; `renovate.json` pinning Action digests and maintaining locks; an independent OSS
-second secret gate (`detect-secrets`) in this repo's CI and the generated-repo template; a Trusted
-Publishing release workflow; an offline wheel bundler for air-gapped PCF; and `SECURITY.md`. (Real
+second secret gate (`detect-secrets`) in this repo's CI and the generated-repo template; an offline
+wheel bundler for air-gapped PCF; and `SECURITY.md`. (Real
 SHA pinning is delegated to Renovate rather than hand-typed, since fabricated SHAs would be worse
 than tags.)
 
@@ -80,7 +80,7 @@ The orchestration surface that ties the suite together:
 
 ## Open preconditions (not blocking, but needed before production)
 
-- `latent-sre` PyPI / internal-mirror coordinates (offline wheel bundler shipped in PR5).
+- `latent-sre` distribution coordinates — internal mirror or source/offline wheel (offline bundler shipped in PR5; not published to public PyPI).
 - GitHub Advanced Security push-protection status on the `latent-sre` org.
 - The pinned orchestrator model (currently `PINNED_MODEL_PLACEHOLDER`).
 

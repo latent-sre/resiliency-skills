@@ -49,8 +49,8 @@ python -m pip install --no-index --find-links vendor/ latent-sre
 ```
 
 Locks are generated with `uv` (`uv lock` → `uv export`). The offline bundler is provided
-(`scripts/build-offline.sh`). **Open precondition:** confirm the PyPI/internal-mirror coordinates for
-publishing `latent-sre`.
+(`scripts/build-offline.sh`). **Open precondition:** confirm the install coordinates for `latent-sre`
+(internal mirror or source/offline wheel; not published to public PyPI).
 
 ## Secret-scanning posture
 

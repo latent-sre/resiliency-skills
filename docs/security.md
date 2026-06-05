@@ -72,8 +72,6 @@ structural break-out.
   run — this avoids committing hand-typed, potentially wrong SHAs.)
 - **Two independent secret gates.** `latent-sre redact` (primary, fail-closed) plus `detect-secrets`
   (`tools/second_secret_gate.py`) run in this repo's CI and in every generated `SRE-<service>` repo.
-- **Trusted Publishing + attestations** for releases (`.github/workflows/release.yml`, OIDC, no
-  long-lived token); **defensive name registration**; **offline wheel bundle**
-  (`scripts/build-offline.sh`) for air-gapped PCF runners.
+- **Offline wheel bundle** (`scripts/build-offline.sh`) for air-gapped PCF runners.
 - The `SRE-<service>` template vendors the exact schema set + engine version it was generated with
   under `.sre/` (see `docs/versioning.md`), and ships its own `renovate.json`.
