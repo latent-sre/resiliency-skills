@@ -14,12 +14,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import mermaid, redact, render, runbook, scaffold, yamlio
+from . import dashboard, mermaid, redact, render, runbook, scaffold, yamlio
 from . import validate as validate_mod
 
 _METADATA_KINDS = {
     "Criticality", "Dependencies", "PcfDeployment", "TechStack", "Architecture", "Infrastructure",
-    "ApiContracts", "Messaging", "Jobs", "Resiliency", "Logging", "Delivery",
+    "ApiContracts", "Messaging", "Jobs", "Resiliency", "Logging", "Delivery", "ObservabilityCoverage",
 }
 
 
@@ -79,6 +79,11 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
         elif kind == "RunbookSpec":
             res.written.append(_copy(path, root / "runbooks" / path.name))
             res.written.append(runbook.render_runbook_file(path, root / "runbooks"))
+        elif kind == "Slo":
+            res.written.append(_copy(path, root / "slos" / path.name))
+        elif kind == "Dashboard":
+            res.written.append(_copy(path, root / "dashboards" / path.name))
+            res.written.append(dashboard.render_dashboard_file(path, root / "dashboards"))
         elif kind in _METADATA_KINDS:
             res.written.append(_copy(path, root / "metadata" / path.name))
             if kind == "Dependencies":
@@ -92,7 +97,7 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
 
     # Final gates over the assembled tree: validate against the VENDORED schemas, then fail-closed redact.
     vendored = root / ".sre" / "schemas"
-    for sub in ("metadata", "alerts/intent", "runbooks"):
+    for sub in ("metadata", "alerts/intent", "runbooks", "slos", "dashboards"):
         d = root / sub
         if d.is_dir():
             res.validation.extend(validate_mod.validate_tree(d, vendored))

@@ -19,10 +19,17 @@ artifactKinds:
   - Resiliency
   - Logging
   - Delivery
-  # later PRs: ObservabilityCoverage, Slo, Dashboard
+  - Slo
+  - ObservabilityCoverage
+  - Dashboard
 
 architecture:
   style: [monolith, modular-monolith, microservice, serverless, unknown]
+
+observability:
+  sliType: [ratio, threshold]
+  coverageStatus: [covered, partial, missing]
+  panelType: [graph, timeseries, stat, table, heatmap, gauge]
 
 infrastructure:
   datastoreKind: [postgres, mysql, mongodb, dynamodb, redis, cassandra, elasticsearch, s3, other]

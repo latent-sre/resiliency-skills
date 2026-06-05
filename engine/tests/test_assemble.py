@@ -10,7 +10,7 @@ _ARTIFACTS = [
     "alert-intent.yaml", "criticality.yaml", "dependencies.yaml", "pcf-deployment.yaml",
     "runbook-spec.yaml", "tech-stack.yaml", "architecture.yaml", "infrastructure.yaml",
     "api-contracts.yaml", "messaging.yaml", "jobs.yaml", "resiliency.yaml", "logging.yaml",
-    "delivery.yaml",
+    "delivery.yaml", "slo.yaml", "observability-coverage.yaml", "dashboard.yaml",
 ]
 
 
@@ -34,6 +34,9 @@ def test_assemble_produces_valid_clean_repo(tmp_path):
     assert (root / "metadata" / "criticality.yaml").is_file()                      # metadata copied
     assert (root / "metadata" / "tech-stack.yaml").is_file()                       # new metadata kind dispatched
     assert (root / "metadata" / "delivery.yaml").is_file()
+    assert (root / "slos" / "slo.yaml").is_file()                                  # SLO -> slos/
+    assert (root / "dashboards" / "dashboard.yaml").is_file()                       # dashboard spec
+    assert (root / "dashboards" / "dashboard.json").is_file()                       # rendered Grafana JSON
     assert (root / "diagrams" / "checkout-dependencies.md").is_file()              # dependency graph
     assert (root / ".github" / "workflows" / "validate.yml").is_file()             # hardened CI
     assert (root / ".sre" / "schemas" / "alert-intent.schema.json").is_file()      # vendored schema
