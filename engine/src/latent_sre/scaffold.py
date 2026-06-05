@@ -32,6 +32,7 @@ _FILE_TEMPLATES = {
     "sre-repo/CODEOWNERS.j2": ".github/CODEOWNERS",
     "sre-repo/pull_request_template.md.j2": ".github/pull_request_template.md",
     "sre-repo/workflows-validate.yml.j2": ".github/workflows/validate.yml",
+    "sre-repo/renovate.json.j2": "renovate.json",
     "sre-repo/gitignore.j2": ".gitignore",
 }
 

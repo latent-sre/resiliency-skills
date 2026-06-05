@@ -1,7 +1,8 @@
 name: validate
 
 # CI for the generated SRE-{{ service }} repo. Validates against the VENDORED schemas it was born with
-# (.sre/schemas, pinned to the engine version in .sre/version) and runs the fail-closed secret gate.
+# (.sre/schemas, pinned to the engine version in .sre/version) and runs two independent secret gates.
+# Actions are SHA-pinned by Renovate (see renovate.json).
 on:
   pull_request:
   push:
@@ -14,22 +15,20 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4            # pin to a commit SHA in production
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install the pinned engine
-        # .sre/version contains e.g. "latent-sre==0.1.0". Use --require-hashes against your index in prod;
-        # use the vendored offline wheel on air-gapped (PCF) runners.
+        # .sre/version contains e.g. "latent-sre=={{ version }}". Use --require-hashes against your index
+        # in prod; use the vendored offline wheel on air-gapped (PCF) runners.
         run: python -m pip install "$(cat .sre/version)"
       - name: Validate artifacts against vendored schemas
-        run: latent-sre validate --schema-dir .sre/schemas metadata alerts/intent runbooks
-      - name: Fail-closed secret/PII gate
+        run: latent-sre validate --schema-dir .sre/schemas metadata alerts/intent runbooks slos dashboards
+      - name: Fail-closed secret/PII gate (primary)
         run: latent-sre redact .
-
-  # Defense-in-depth: enable a second, independent OSS secret scanner (gitleaks/trufflehog), pinned by SHA.
-  # secret-scan-second-gate:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: gitleaks/gitleaks-action@<pin-to-sha>
+      - name: Independent OSS second secret gate (detect-secrets)
+        run: |
+          python -m pip install "detect-secrets>=1.5,<2"
+          python -m detect_secrets scan . > .ds-findings.json
+          python -c "import json,sys; r=json.load(open('.ds-findings.json')).get('results',{}); sys.exit(1 if r else 0)"

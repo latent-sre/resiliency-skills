@@ -13,8 +13,8 @@ chain.** A working vertical slice is more valuable than many half-wired skills.
 | PR1 | Contract + security core | ✅ merged (#1) |
 | PR2 | End-to-end publish path | ✅ pushed (stacked) |
 | PR3 | Skill suite — metadata breadth | ✅ pushed (stacked) |
-| PR4 | Observability, SLOs & dashboards | 🚧 in progress (stacked on PR3) |
-| PR5 | Supply-chain & release hardening | planned |
+| PR4 | Observability, SLOs & dashboards | ✅ pushed (stacked) |
+| PR5 | Supply-chain & release hardening | 🚧 in progress (stacked on PR4) |
 | PR6 | Orchestration & scale | planned |
 
 ## PR1 — Contract + security core ✅
@@ -56,12 +56,14 @@ injection-safe, with a `REPLACE_ME__grafana_datasource` sentinel). `assemble` no
 `slos/`, `Dashboard` → `dashboards/` (spec + rendered JSON), and `ObservabilityCoverage` → `metadata/`,
 all validated against the vendored schemas.
 
-## PR5 — Supply-chain & release hardening
+## PR5 — Supply-chain & release hardening 🚧
 
-Close the "documented but not enforced" gaps from PR1: generate `uv.lock` and switch CI to
-`--require-hashes`, pin all GitHub Actions by commit SHA, wire the OSS second secret scanner
-(gitleaks/trufflehog) into the publish gate, add Renovate, and publish an offline wheel for
-air-gapped PCF CI.
+Closes the "documented but not enforced" gaps from PR1: `uv.lock` + `requirements*.lock` with CI on
+`--require-hashes`; `renovate.json` pinning Action digests and maintaining locks; an independent OSS
+second secret gate (`detect-secrets`) in this repo's CI and the generated-repo template; a Trusted
+Publishing release workflow; an offline wheel bundler for air-gapped PCF; and `SECURITY.md`. (Real
+SHA pinning is delegated to Renovate rather than hand-typed, since fabricated SHAs would be worse
+than tags.)
 
 ## PR6 — Orchestration & scale
 
