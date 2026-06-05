@@ -20,6 +20,11 @@ dependencies = [
 [project.scripts]
 latent-sre = "latent_sre.cli:main"
 
+# Test/dev tooling, hash-pinned via uv.lock alongside the runtime deps (supply-chain hardening).
+# detect-secrets is the independent OSS second secret gate (defense-in-depth behind latent-sre redact).
+[dependency-groups]
+dev = ["pytest>=8,<9", "detect-secrets>=1.5,<2"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/latent_sre"]
 
