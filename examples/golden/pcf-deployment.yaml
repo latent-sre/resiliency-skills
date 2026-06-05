@@ -1,0 +1,23 @@
+apiVersion: sre.latent-sre/v1
+kind: PcfDeployment
+service: checkout
+spec:
+  org: payments
+  space: prod
+  instances: 4
+  memory: 1G
+  disk: 1G
+  buildpacks: [java_buildpack_offline]
+  routes: [checkout.example.com]
+  boundServices: [checkout-postgres, checkout-config]
+  healthCheck:
+    type: http
+    endpoint: /actuator/health
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: map-pcf-application
+ownership: platform
+confidence: medium
+needs-human-review: true

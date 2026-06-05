@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/dependencies.schema.json",
+  "title": "Dependencies",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "service", "dependencies", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "Dependencies" },
+    "service": { "type": "string" },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "direction"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "enum": ["http", "grpc", "datastore", "queue", "external-api", "saas", "cache"] },
+          "direction": { "enum": ["upstream", "downstream"] },
+          "criticality": { "enum": ["critical", "high", "medium", "low", "unknown"] },
+          "ownership": { "enum": ["app", "platform", "shared"] },
+          "runtimeBinding": { "type": "string", "enum": ["observable-from-repo", "not-observable-from-repo"] }
+        }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

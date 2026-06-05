@@ -1,0 +1,10 @@
+{
+  "_comment": "AppDynamics health rule (TEMPLATE - needs-config). Set application/tier for your org.",
+  "unverifiedAgainstLive": {{ unverified | tojson }},
+  "name": {{ name | tojson }},
+  "application": {{ app | tojson }},
+  "affectedService": {{ service | tojson }},
+  "severity": {{ severity | tojson }},
+  "ownership": {{ ownership | tojson }},
+  "runbook": {{ runbook | tojson }}
+}

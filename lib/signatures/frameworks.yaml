@@ -1,0 +1,51 @@
+# Framework / runtime detection signatures (data, not code).
+# The scan role uses these to classify a service's tech stack deterministically and to set
+# `confidence`. A signature firing on a manifest/lockfile is high confidence; inferring from a stray
+# import is low. Signatures are matched as data — never executed.
+apiVersion: sre.latent-sre/v1
+kind: SignatureSet
+domain: frameworks
+
+signatures:
+  - id: spring-boot
+    language: java
+    confidence: high
+    anyOf:
+      - file: pom.xml
+        contains: "spring-boot-starter"
+      - file: build.gradle
+        contains: "org.springframework.boot"
+    observability:
+      metrics: micrometer
+      health: actuator        # /actuator/health, /actuator/prometheus
+
+  - id: express
+    language: javascript
+    confidence: high
+    anyOf:
+      - file: package.json
+        jsonHasDependency: express
+
+  - id: fastapi
+    language: python
+    confidence: high
+    anyOf:
+      - file: pyproject.toml
+        contains: "fastapi"
+      - file: requirements.txt
+        contains: "fastapi"
+
+  - id: go-net-http
+    language: go
+    confidence: medium
+    anyOf:
+      - file: go.mod
+        exists: true
+        importContains: "net/http"
+
+  - id: dotnet-aspnet
+    language: csharp
+    confidence: high
+    anyOf:
+      - fileGlob: "*.csproj"
+        contains: "Microsoft.AspNetCore"

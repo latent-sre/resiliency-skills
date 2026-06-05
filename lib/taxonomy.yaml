@@ -1,0 +1,42 @@
+# Shared taxonomy — the controlled vocabulary every skill and schema draws from.
+# This is the "fat config": skills stay thin by referencing these enums instead of inventing terms.
+# Keep in lockstep with engine/schemas/*.schema.json (the enums here mirror the schema enums).
+apiVersion: sre.latent-sre/v1
+kind: Taxonomy
+
+artifactKinds:
+  - Criticality
+  - Dependencies
+  - AlertIntent
+  # later PRs: TechStack, Architecture, PcfDeployment, Infrastructure, ApiContracts, Messaging,
+  # Jobs, Resiliency, Logging, Delivery, ObservabilityCoverage, Slo, Dashboard, Runbook
+
+governance:
+  ownership: [app, platform, shared]          # who owns the concern (app team vs platform vs shared)
+  confidence: [high, medium, low]             # how sure the scan is; low => needs more human review
+  needsHumanReview: [true]                     # AI output is always human-reviewed before it is trusted
+
+criticality:
+  tier: [tier0, tier1, tier2, tier3, unknown]
+  businessCriticality: [critical, high, medium, low, unknown]
+  dataClassification: [public, internal, confidential, pii, pci, unknown]
+
+dependencies:
+  kind: [http, grpc, datastore, queue, external-api, saas, cache]
+  direction: [upstream, downstream]
+  # Whether the dependency is actually observable from the repo, or only inferred. Drives confidence.
+  runtimeBinding: [observable-from-repo, not-observable-from-repo]
+
+alerting:
+  signalType: [log, metric, trace, synthetic]
+  signalSource: [splunk, wavefront, appdynamics, thousandeyes, otel, grafana, prometheus]
+  severity: [sev1, sev2, sev3]
+  comparator: [">", ">=", "<", "<=", "==", "!="]
+  # Targets the engine can render an AlertIntent into. grafana/prometheus are deliverable;
+  # splunk/wavefront/appdynamics are needs-config (sentinel-guarded); thousandeyes is proposal-only.
+  renderTargets: [grafana, prometheus, splunk, wavefront, appdynamics, thousandeyes]
+
+# Default SLO windows for burn-rate alerts (advisory; humans tune per service).
+sloWindows:
+  fast: { shortWindow: 5m, longWindow: 1h, burnFactor: 14.4 }
+  slow: { shortWindow: 30m, longWindow: 6h, burnFactor: 6 }

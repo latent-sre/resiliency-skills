@@ -1,0 +1,32 @@
+apiVersion: sre.latent-sre/v1
+kind: RunbookSpec
+service: checkout
+spec:
+  title: Checkout 5xx error rate high
+  summary: Triage and mitigate elevated 5xx on the checkout path.
+  severity: sev2
+  signals:
+    - Prometheus alert checkout-high-error-rate firing
+    - AppDynamics health rule breach on checkout
+  triage:
+    - Check the checkout dashboard for error-rate and latency trends
+    - Determine whether errors correlate with a downstream dependency (payments-api, postgres-main)
+  mitigation:
+    - If payments-api is degraded, enable the circuit breaker / fallback path
+    - If the database is saturated, scale read replicas and shed non-critical load
+  rollback:
+    - Roll back the most recent checkout deploy if errors began immediately after it
+  escalation:
+    team: payments-sre
+  links:
+    dashboard: dashboards/checkout.json
+    slo: slos/checkout-availability.openslo.yaml
+    alert: alerts/intent/checkout-high-error-rate.yaml
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: generate-runbooks
+ownership: app
+confidence: medium
+needs-human-review: true

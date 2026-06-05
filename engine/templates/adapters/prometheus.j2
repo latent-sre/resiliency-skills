@@ -1,0 +1,14 @@
+# Prometheus alerting rule (deliverable). Rendered from a neutral AlertIntent.
+# unverified-against-live: review the expr before applying.
+groups:
+  - name: {{ service | tojson }}
+    rules:
+      - alert: {{ name | tojson }}
+        expr: {{ query | tojson }}
+        for: {{ for | tojson }}
+        labels:
+          severity: {{ severity | tojson }}
+          ownership: {{ ownership | tojson }}
+        annotations:
+          summary: {{ summary | tojson }}
+          runbook_url: {{ runbook | tojson }}
