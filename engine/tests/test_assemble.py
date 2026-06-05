@@ -6,8 +6,12 @@ from latent_sre import assemble
 
 REPO = Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "examples" / "golden"
-_ARTIFACTS = ["alert-intent.yaml", "criticality.yaml", "dependencies.yaml",
-              "pcf-deployment.yaml", "runbook-spec.yaml"]
+_ARTIFACTS = [
+    "alert-intent.yaml", "criticality.yaml", "dependencies.yaml", "pcf-deployment.yaml",
+    "runbook-spec.yaml", "tech-stack.yaml", "architecture.yaml", "infrastructure.yaml",
+    "api-contracts.yaml", "messaging.yaml", "jobs.yaml", "resiliency.yaml", "logging.yaml",
+    "delivery.yaml",
+]
 
 
 def _scan(tmp_path) -> Path:
@@ -28,6 +32,8 @@ def test_assemble_produces_valid_clean_repo(tmp_path):
     assert (root / "alerts" / "prometheus" / "checkout-high-error-rate.yaml").is_file()  # rendered adapter
     assert (root / "runbooks" / "runbook-spec.md").is_file()                       # rendered runbook
     assert (root / "metadata" / "criticality.yaml").is_file()                      # metadata copied
+    assert (root / "metadata" / "tech-stack.yaml").is_file()                       # new metadata kind dispatched
+    assert (root / "metadata" / "delivery.yaml").is_file()
     assert (root / "diagrams" / "checkout-dependencies.md").is_file()              # dependency graph
     assert (root / ".github" / "workflows" / "validate.yml").is_file()             # hardened CI
     assert (root / ".sre" / "schemas" / "alert-intent.schema.json").is_file()      # vendored schema

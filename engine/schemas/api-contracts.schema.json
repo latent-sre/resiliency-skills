@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://latent-sre/schemas/api-contracts.schema.json",
+  "title": "ApiContracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "service", "spec", "provenance", "ownership", "confidence", "needs-human-review"],
+  "properties": {
+    "apiVersion": { "const": "sre.latent-sre/v1" },
+    "kind": { "const": "ApiContracts" },
+    "service": { "type": "string" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exposes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "protocol"],
+            "properties": {
+              "name": { "type": "string" },
+              "protocol": { "enum": ["rest", "grpc", "graphql", "soap"] },
+              "version": { "type": "string" },
+              "specPath": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "ownership": { "enum": ["app", "platform", "shared"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "needs-human-review": { "const": true }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "commit", "scanDate", "skill"],
+      "properties": {
+        "repo": { "type": "string" }, "commit": { "type": "string" },
+        "scanDate": { "type": "string" }, "skill": { "type": "string" },
+        "skillVersion": { "type": "string" }, "modelVersion": { "type": "string" }
+      }
+    }
+  }
+}

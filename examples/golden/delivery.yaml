@@ -1,0 +1,16 @@
+apiVersion: sre.latent-sre/v1
+kind: Delivery
+service: checkout
+spec:
+  ci: github-actions
+  pipeline: [build, test, scan, deploy]
+  strategy: rolling
+  environments: [dev, staging, prod]
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: map-delivery
+ownership: platform
+confidence: medium
+needs-human-review: true

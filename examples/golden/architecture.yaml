@@ -1,0 +1,22 @@
+apiVersion: sre.latent-sre/v1
+kind: Architecture
+service: checkout
+spec:
+  style: microservice
+  components:
+    - name: checkout-api
+      responsibility: HTTP checkout endpoints
+    - name: checkout-worker
+      responsibility: async order fulfilment
+  entryPoints:
+    - POST /checkout
+    - GET /checkout/{id}
+  patterns: [hexagonal, cqrs]
+provenance:
+  repo: github.com/acme/checkout
+  commit: 9d779ba
+  scanDate: '2026-06-04T12:00:00Z'
+  skill: map-architecture
+ownership: app
+confidence: medium
+needs-human-review: true
