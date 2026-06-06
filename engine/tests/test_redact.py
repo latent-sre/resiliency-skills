@@ -75,3 +75,15 @@ def test_known_pattern_reports_every_match_on_a_line():
     b = "AKIA" + "B" * 16
     aws = [f for f in _findings(f"keys: {a} and {b}") if f.rule == "aws-access-key-id"]
     assert len(aws) == 2  # both keys flagged, not just the first match
+
+
+def test_scans_utf16_text_for_secrets(tmp_path):
+    # a secret in a non-UTF-8 *text* file must still be caught (fail-closed), not silently skipped
+    key = "AKIA" + "W" * 16
+    (tmp_path / "creds.yaml").write_text(f"k: {key}\n", encoding="utf-16")
+    assert any(f.rule == "aws-access-key-id" for f in redact.scan_path(tmp_path / "creds.yaml"))
+
+
+def test_skips_genuine_binary(tmp_path):
+    (tmp_path / "blob.bin").write_bytes(b"\x00\xff\x01\xfe" * 60)  # invalid utf-8, NUL/control-heavy
+    assert redact.scan_path(tmp_path / "blob.bin") == []

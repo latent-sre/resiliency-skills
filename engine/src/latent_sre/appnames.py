@@ -21,6 +21,8 @@ def _clean(name: str) -> str:
 
 def discover(repo: str | Path) -> dict:
     repo = Path(repo)
+    if not repo.is_dir():  # a typo'd / missing path must error, not fabricate a service from a basename
+        raise FileNotFoundError(f"repo path not found or not a directory: {repo}")
     names: list[str] = []
 
     # PCF/Tanzu application manifests

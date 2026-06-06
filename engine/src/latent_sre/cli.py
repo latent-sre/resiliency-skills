@@ -1,6 +1,7 @@
 """`latent-sre` CLI — the deterministic surface the orchestrator/CI invoke.
 
-Exit codes: 0 = ok; 1 = gate failure (validation errors or secret findings — fail-closed).
+Exit codes: 0 = ok; 1 = gate failure (validation errors or secret findings — fail-closed);
+2 = bad invocation/input (missing file, unreadable path).
 """
 from __future__ import annotations
 
@@ -165,7 +166,11 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(fn=_cmd_plan)
 
     args = p.parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except OSError as e:  # missing/unreadable input → clean message + exit 2, not a stacktrace
+        print(f"{args.cmd}: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

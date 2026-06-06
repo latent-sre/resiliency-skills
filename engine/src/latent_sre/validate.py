@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from ruamel.yaml import YAMLError
 
 from . import yamlio
 from .paths import data_dir
@@ -38,14 +39,21 @@ def _kebab(s: str) -> str:
 
 def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
     path = Path(path)
-    if path.suffix in (".yaml", ".yml"):
-        doc = yamlio.load(path)
-    else:
-        doc = json.loads(path.read_text(encoding="utf-8"))
+    # Untrusted input: a malformed or non-mapping artifact must yield a clean per-file problem,
+    # never an exception that aborts the whole tree scan (validate is a fail-closed gate).
+    try:
+        if path.suffix in (".yaml", ".yml"):
+            doc = yamlio.load(path)
+        else:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, YAMLError) as e:
+        return [f"{path}: could not parse: {e}"]
+    if not isinstance(doc, dict):
+        return [f"{path}: top-level document is not a mapping ({type(doc).__name__})"]
 
     schema_path = _schema_for(doc, schema_dir)
     if schema_path is None:
-        return [f"{path}: no schema found for kind={doc.get('kind') if isinstance(doc, dict) else '?'}"]
+        return [f"{path}: no schema found for kind={doc.get('kind')!r}"]
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)

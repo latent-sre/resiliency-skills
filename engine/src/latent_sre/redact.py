@@ -151,6 +151,27 @@ def scan_text(text: str, path: str = "<text>", allow: list[str] | None = None) -
     return unique
 
 
+def _decode_for_scan(raw: bytes) -> str | None:
+    """Decode bytes for scanning. Handles non-UTF-8 *text* (BOM'd UTF-16, latin-1) so a secret there
+    is not silently missed, but returns None for genuine binaries (which can't carry a text secret and
+    would only generate entropy false-positives). Fail-closed bias: when in doubt, scan."""
+    if not raw:
+        return ""
+    for bom, enc in ((b"\xef\xbb\xbf", "utf-8-sig"), (b"\xff\xfe", "utf-16"), (b"\xfe\xff", "utf-16")):
+        if raw.startswith(bom):
+            return raw.decode(enc, errors="replace")
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    # No BOM and not UTF-8: skip only if it looks binary (many NUL/control bytes); else scan as latin-1.
+    sample = raw[:8192]
+    nontext = sum(1 for b in sample if b == 0 or b < 9 or 13 < b < 32)
+    if nontext / len(sample) > 0.30:
+        return None
+    return raw.decode("latin-1", errors="replace")
+
+
 def scan_path(target: Path) -> list[Finding]:
     """Scan a file or directory tree. Fail-closed: callers block publish if this is non-empty."""
     target = Path(target)
@@ -162,8 +183,12 @@ def scan_path(target: Path) -> list[Finding]:
     ]
     for p in paths:
         try:
-            text = p.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue  # binary / unreadable — skip
+            raw = p.read_bytes()
+        except OSError as e:
+            findings.append(Finding(str(p), 0, "unreadable", str(e)))  # fail loud, never silent-skip
+            continue
+        text = _decode_for_scan(raw)
+        if text is None:
+            continue  # genuine binary — no text secret possible
         findings.extend(scan_text(text, str(p), allow))
     return findings

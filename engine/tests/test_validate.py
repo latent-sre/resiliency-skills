@@ -28,3 +28,26 @@ def test_unknown_field_rejected_by_allowlist(tmp_path):
     p = tmp_path / "extra.yaml"
     yamlio.dump(doc, p)
     assert validate.validate_file(p), "additionalProperties:false must reject stray keys"
+
+
+def test_malformed_yaml_is_reported_not_raised(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("a: : [\n", encoding="utf-8")
+    problems = validate.validate_file(bad)
+    assert problems and "could not parse" in problems[0]
+
+
+def test_non_mapping_document_is_reported(tmp_path):
+    f = tmp_path / "scalar.yaml"
+    f.write_text("just a string\n", encoding="utf-8")
+    problems = validate.validate_file(f)
+    assert problems and "not a mapping" in problems[0]
+
+
+def test_one_bad_file_does_not_abort_the_tree(tmp_path):
+    # a malformed file must be reported but NOT blind the validator to its siblings
+    (tmp_path / "bad.yaml").write_text("a: : [\n", encoding="utf-8")
+    yamlio.dump(yamlio.load(GOLDEN / "criticality.yaml"), tmp_path / "good.yaml")
+    problems = validate.validate_tree(tmp_path)
+    assert any("could not parse" in p for p in problems)   # bad file surfaced
+    assert all("good.yaml" not in p for p in problems)      # good sibling still validated (clean)
