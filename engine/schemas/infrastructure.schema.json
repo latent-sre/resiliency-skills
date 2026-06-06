@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/infrastructure.schema.json",
+  "$id": "https://latent-sre/schemas/v1/infrastructure.schema.json",
   "title": "Infrastructure",
   "type": "object",
   "additionalProperties": false,

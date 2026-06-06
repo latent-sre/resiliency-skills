@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/alert-intent.schema.json",
+  "$id": "https://latent-sre/schemas/v1/alert-intent.schema.json",
   "title": "AlertIntent",
   "type": "object",
   "additionalProperties": false,

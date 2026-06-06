@@ -23,13 +23,8 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import SCHEMA_API_VERSION, dashboard, hashdiff, mermaid, redact, render, runbook, scaffold, yamlio
+from . import SCHEMA_API_VERSION, dashboard, hashdiff, mermaid, redact, registry, render, runbook, scaffold, yamlio
 from . import validate as validate_mod
-
-_METADATA_KINDS = {
-    "Criticality", "Dependencies", "PcfDeployment", "TechStack", "Architecture", "Infrastructure",
-    "ApiContracts", "Messaging", "Jobs", "Resiliency", "Logging", "Delivery", "ObservabilityCoverage",
-}
 
 
 @dataclass
@@ -73,21 +68,19 @@ def _copy(src: Path, dest: Path) -> Path:
 
 
 def _stage_artifact(kind: str, path: Path, stage: Path) -> list[Path]:
-    """Render/copy one artifact into an isolated staging dir; return the files it produced."""
-    if kind == "AlertIntent":
-        return [_copy(path, stage / "alerts" / "intent" / path.name),
-                *render.render_file(path, stage / "alerts")]
-    if kind == "RunbookSpec":
-        return [_copy(path, stage / "runbooks" / path.name),
-                runbook.render_runbook_file(path, stage / "runbooks")]
-    if kind == "Slo":
-        return [_copy(path, stage / "slos" / path.name)]
-    if kind == "Dashboard":
-        return [_copy(path, stage / "dashboards" / path.name),
-                dashboard.render_dashboard_file(path, stage / "dashboards")]
-    if kind in _METADATA_KINDS:
-        return [_copy(path, stage / "metadata" / path.name)]
-    return []
+    """Render/copy one artifact into an isolated staging dir; return the files it produced.
+    Destination + renderer come from the single registry (no per-kind branches to keep in sync)."""
+    spec = registry.BY_KIND.get(kind)
+    if spec is None:
+        return []
+    produced = [_copy(path, stage / spec.dest / path.name)]
+    if spec.renderer == "alert":
+        produced += render.render_file(path, stage / "alerts")
+    elif spec.renderer == "runbook":
+        produced.append(runbook.render_runbook_file(path, stage / "runbooks"))
+    elif spec.renderer == "dashboard":
+        produced.append(dashboard.render_dashboard_file(path, stage / "dashboards"))
+    return produced
 
 
 def _validate_rendered(written: list[Path], root: Path) -> list[str]:
@@ -169,7 +162,7 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
     # 3. Final gates: schema-validate source artifacts against the VENDORED schemas, sanity-check the
     #    rendered deliverables, then run the fail-closed redact gate over the whole tree.
     vendored = root / ".sre" / "schemas"
-    for sub in ("metadata", "alerts/intent", "runbooks", "slos", "dashboards"):
+    for sub in registry.ARTIFACT_DIRS:
         d = root / sub
         if d.is_dir():
             res.validation.extend(validate_mod.validate_tree(d, vendored))

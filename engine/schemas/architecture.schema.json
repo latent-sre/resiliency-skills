@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/architecture.schema.json",
+  "$id": "https://latent-sre/schemas/v1/architecture.schema.json",
   "title": "Architecture",
   "type": "object",
   "additionalProperties": false,

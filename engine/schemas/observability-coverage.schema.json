@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/observability-coverage.schema.json",
+  "$id": "https://latent-sre/schemas/v1/observability-coverage.schema.json",
   "title": "ObservabilityCoverage",
   "type": "object",
   "additionalProperties": false,

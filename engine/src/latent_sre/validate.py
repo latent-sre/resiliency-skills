@@ -13,31 +13,12 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAMLError
 
-from . import SCHEMA_API_VERSION, yamlio
+from . import SCHEMA_API_VERSION, registry, yamlio
 from .paths import data_dir
 
 SCHEMA_DIR = data_dir("schemas")
 _API_RE = re.compile(r"^sre\.latent-sre/v(\d+)$")
 _ENGINE_API_MAJOR = int(_API_RE.match(SCHEMA_API_VERSION).group(1))
-
-
-def _schema_for(doc: dict, schema_dir: Path) -> Path | None:
-    """Map an artifact to its schema by `kind` (preferred) or by filename stem."""
-    kind = (doc or {}).get("kind")
-    if kind:
-        cand = schema_dir / f"{_kebab(kind)}.schema.json"
-        if cand.is_file():
-            return cand
-    return None
-
-
-def _kebab(s: str) -> str:
-    out = []
-    for i, ch in enumerate(s):
-        if ch.isupper() and i and not s[i - 1].isupper():
-            out.append("-")
-        out.append(ch.lower())
-    return "".join(out)
 
 
 def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
@@ -63,9 +44,15 @@ def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
             return [f"{path}: apiVersion {av} is newer than this engine supports "
                     f"(max v{_ENGINE_API_MAJOR}) — upgrade latent-sre"]
 
-    schema_path = _schema_for(doc, schema_dir)
-    if schema_path is None:
-        return [f"{path}: no schema found for kind={doc.get('kind')!r}"]
+    kind = doc.get("kind")
+    if kind in registry.CONTROL_KINDS:
+        return []  # control-plane (orchestration) artifact — no data schema by design
+    spec = registry.BY_KIND.get(kind) if isinstance(kind, str) else None
+    if spec is None:
+        return [f"{path}: unknown or missing kind={kind!r}"]
+    schema_path = schema_dir / f"{spec.schema}.schema.json"
+    if not schema_path.is_file():
+        return [f"{path}: schema {spec.schema}.schema.json not found in {schema_dir}"]
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
