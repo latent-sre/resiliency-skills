@@ -179,7 +179,8 @@ def scan_path(target: Path) -> list[Finding]:
     allow = _load_allowlist(root)
     findings: list[Finding] = []
     paths = [target] if target.is_file() else [
-        p for p in target.rglob("*") if p.is_file() and ".git" not in p.parts
+        p for p in target.rglob("*")
+        if p.is_file() and ".git" not in p.parts and ".sre" not in p.parts  # skip engine-internal vendor dir
     ]
     for p in paths:
         try:

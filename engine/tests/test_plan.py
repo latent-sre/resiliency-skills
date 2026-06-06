@@ -26,12 +26,15 @@ def test_plan_discovers_services_and_orders_skills():
     assert {s["status"] for s in steps} == {"pending"}
 
 
-def test_plan_annotates_resume_status(tmp_path):
+def test_plan_annotates_resume_status_per_service(tmp_path):
     ss = tmp_path / "scan-state.yaml"
-    scanstate.mark(ss, "assess-tech-stack", "abc123", "0.1.0", "out", "h", status="done")
+    scanstate.mark(ss, "checkout", "assess-tech-stack", "abc123", "0.1.0", "out", "h", status="done")
     p = plan.make_plan(SAMPLE, scan_state_path=ss)
-    done = [s["skill"] for s in p["services"][0]["skills"] if s["status"] == "done"]
-    assert done == ["assess-tech-stack"]
+    by = {s["service"]: s for s in p["services"]}
+    checkout_done = [s["skill"] for s in by["checkout"]["skills"] if s["status"] == "done"]
+    payments_done = [s["skill"] for s in by["payments"]["skills"] if s["status"] == "done"]
+    assert checkout_done == ["assess-tech-stack"]
+    assert payments_done == []  # resume is per-service — a sibling is NOT falsely reported done
 
 
 def test_plan_fanout_above_cap_requires_human(tmp_path):

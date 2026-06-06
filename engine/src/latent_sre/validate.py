@@ -7,15 +7,18 @@ this is how the *positive field allow-list* (review item F4) is enforced. Requir
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAMLError
 
-from . import yamlio
+from . import SCHEMA_API_VERSION, yamlio
 from .paths import data_dir
 
 SCHEMA_DIR = data_dir("schemas")
+_API_RE = re.compile(r"^sre\.latent-sre/v(\d+)$")
+_ENGINE_API_MAJOR = int(_API_RE.match(SCHEMA_API_VERSION).group(1))
 
 
 def _schema_for(doc: dict, schema_dir: Path) -> Path | None:
@@ -50,6 +53,15 @@ def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
         return [f"{path}: could not parse: {e}"]
     if not isinstance(doc, dict):
         return [f"{path}: top-level document is not a mapping ({type(doc).__name__})"]
+
+    av = doc.get("apiVersion")
+    if isinstance(av, str):  # enforce the fleet contract version, not just the schema's per-field const
+        m = _API_RE.match(av)
+        if not m:
+            return [f"{path}: unrecognized apiVersion {av!r} (expected sre.latent-sre/vN)"]
+        if int(m.group(1)) > _ENGINE_API_MAJOR:
+            return [f"{path}: apiVersion {av} is newer than this engine supports "
+                    f"(max v{_ENGINE_API_MAJOR}) — upgrade latent-sre"]
 
     schema_path = _schema_for(doc, schema_dir)
     if schema_path is None:

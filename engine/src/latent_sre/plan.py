@@ -37,7 +37,7 @@ def make_plan(repo: str | Path, pipeline_path: str | Path | None = None,
         for phase, skill in ordered:
             status = "pending"
             if scan_state_path:
-                rec = scanstate.get(scan_state_path, skill)
+                rec = scanstate.get(scan_state_path, svc, skill)  # per-service resume, not global
                 if rec:
                     status = rec.get("status", "pending")
             steps.append({"phase": phase, "skill": skill, "status": status})

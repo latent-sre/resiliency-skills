@@ -2,7 +2,7 @@
 import shutil
 from pathlib import Path
 
-from latent_sre import assemble
+from latent_sre import assemble, yamlio
 
 REPO = Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "examples" / "golden"
@@ -49,3 +49,27 @@ def test_assemble_is_fail_closed_on_secret(tmp_path):
     bad.write_text(bad.read_text() + f"\n# leaked-by-test: {planted}\n")
     res = assemble.assemble(scan, tmp_path / "out2")
     assert not res.ok and res.secrets  # redact gate blocks publish
+
+
+def test_reassembly_preserves_human_edits(tmp_path):
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)                                   # first scan
+    rb = out / "runbooks" / "runbook-spec.md"
+    human = rb.read_text() + "\n<!-- human-tuned, do not clobber -->\n"
+    rb.write_text(human, encoding="utf-8")
+    res = assemble.assemble(scan, out)                             # re-scan
+    assert rb.read_text() == human                                 # human edit preserved, NOT overwritten
+    assert (out / ".proposed" / "runbooks" / "runbook-spec.md").is_file()  # AI draft proposed instead
+    assert res.proposed                                            # and surfaced on the result
+
+
+def test_duplicate_output_names_are_flagged_not_silently_clobbered(tmp_path):
+    scan = tmp_path / "scan"
+    scan.mkdir()
+    intent = yamlio.load(GOLDEN / "alert-intent.yaml")
+    yamlio.dump(intent, scan / "a.yaml")
+    yamlio.dump(intent, scan / "b.yaml")  # same metadata.name -> same rendered path
+    res = assemble.assemble(scan, tmp_path / "out")
+    assert not res.ok
+    assert any("collision" in v for v in res.validation)

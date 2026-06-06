@@ -51,3 +51,12 @@ def test_one_bad_file_does_not_abort_the_tree(tmp_path):
     problems = validate.validate_tree(tmp_path)
     assert any("could not parse" in p for p in problems)   # bad file surfaced
     assert all("good.yaml" not in p for p in problems)      # good sibling still validated (clean)
+
+
+def test_apiversion_newer_than_engine_is_rejected(tmp_path):
+    doc = yamlio.load(GOLDEN / "criticality.yaml")
+    doc["apiVersion"] = "sre.latent-sre/v2"  # a future major the engine can't understand
+    p = tmp_path / "v2.yaml"
+    yamlio.dump(doc, p)
+    problems = validate.validate_file(p)
+    assert problems and "newer than this engine supports" in problems[0]

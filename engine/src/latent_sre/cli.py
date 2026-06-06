@@ -67,6 +67,10 @@ def _cmd_assemble(a) -> int:
     for w in res.written:
         print(w)
     print(f"assemble: {res.service} -> {res.root} ({len(res.written)} files)")
+    if res.proposed:
+        print(f"  proposed (human edits preserved; review .proposed/) ({len(res.proposed)}):")
+        for pf in res.proposed:
+            print(f"    {pf}")
     if res.validation:
         print(f"  validation problems ({len(res.validation)}):", file=sys.stderr)
         for v in res.validation:
@@ -100,8 +104,8 @@ def _cmd_hashdiff(a) -> int:
 
 
 def _cmd_scanstate(a) -> int:
-    rec = scanstate.get(a.path, a.skill)
-    print(rec if rec else f"(no record for {a.skill})")
+    rec = scanstate.get(a.path, a.service, a.skill)
+    print(rec if rec else f"(no record for {a.service}/{a.skill})")
     return 0
 
 
@@ -157,7 +161,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("path"); s.set_defaults(fn=_cmd_hashdiff)
 
     s = sub.add_parser("scan-state", help="read a scan-state record")
-    s.add_argument("path"); s.add_argument("--skill", required=True); s.set_defaults(fn=_cmd_scanstate)
+    s.add_argument("path"); s.add_argument("--service", required=True)
+    s.add_argument("--skill", required=True); s.set_defaults(fn=_cmd_scanstate)
 
     s = sub.add_parser("plan", help="emit a per-service scan plan (pipeline x fan-out + resume status)")
     s.add_argument("repo")
