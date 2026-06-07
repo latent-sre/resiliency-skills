@@ -32,6 +32,7 @@ spec:
   condition: { comparator, threshold, window }
   burnRate: { slo, shortWindow, longWindow, factor }
   severity: sev1|sev2|sev3
+  class: symptom|cause        # symptom = user-facing/SLO (page-eligible); cause = diagnostic (ticket)
   renderTargets: [prometheus, grafana, splunk, wavefront, appdynamics]
   unverified-against-live: true
 provenance: { repo, commit, scanDate, skill: generate-alerts }
@@ -48,3 +49,7 @@ needs-human-review: true
   inserts `REPLACE_ME__` sentinels for org-specific fields, and sandboxes/escapes output.
 - Prefer SLO **burn-rate** alerts (use `sloWindows` defaults) over static thresholds where an SLO
   exists.
+- Set **`class`**: `symptom` for user-facing/SLO alerts (page-worthy), `cause` for diagnostic ones
+  (ticket) — alert on symptoms, not causes. The engine derives a severity **floor** from
+  `Criticality.tier` deterministically (tier0→sev1 … tier3→sev3) and will *raise* (never lower) your
+  declared `severity` to meet it, so paging level doesn't depend on model consistency.

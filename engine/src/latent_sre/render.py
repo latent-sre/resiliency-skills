@@ -25,6 +25,18 @@ TARGETS = ["grafana", "prometheus", "splunk", "wavefront", "appdynamics", "thous
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
+_SEV_RANK = {"sev1": 1, "sev2": 2, "sev3": 3}
+TIER_SEVERITY_FLOOR = {"tier0": "sev1", "tier1": "sev2", "tier2": "sev3", "tier3": "sev3"}
+
+
+def _effective_severity(declared: str, tier: str | None) -> str:
+    """A service's criticality tier sets a severity FLOOR (deterministic, not LLM-dependent); the
+    floor can only RAISE severity to match the tier, never lower the author's declared severity."""
+    floor = TIER_SEVERITY_FLOOR.get(tier or "")
+    if not floor:
+        return declared
+    return declared if _SEV_RANK.get(declared, 3) <= _SEV_RANK.get(floor, 3) else floor
+
 
 def _sanitize(v: object) -> str:
     """Collapse newlines/control chars so an untrusted value can't inject new lines/stanzas into a
@@ -55,7 +67,7 @@ def sentinel(field: str) -> str:
     return f"REPLACE_ME__{field}"
 
 
-def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR) -> str:
+def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR, tier: str | None = None) -> str:
     if target not in TARGETS:
         raise ValueError(f"unknown target {target!r}")
     env = make_sandbox_env(adapter_dir)
@@ -76,7 +88,9 @@ def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR) ->
         "comparator": spec.get("condition", {}).get("comparator", ">"),
         "threshold": spec.get("condition", {}).get("threshold", sentinel("threshold")),
         "window": spec.get("condition", {}).get("window", "5m"),
-        "severity": spec.get("severity", "sev3"),
+        "severity": _effective_severity(spec.get("severity", "sev3"), tier),
+        "severity_class": spec.get("class", "symptom"),
+        "occurrences": spec.get("condition", {}).get("occurrences"),
         "for": spec.get("for", "10m"),
         "runbook": spec.get("links", {}).get("runbook", ""),
         "summary": spec.get("annotations", {}).get("summary", ""),
@@ -95,7 +109,7 @@ def _safe_basename(name: str, fallback: str = "alert") -> str:
 
 
 def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str] | None = None,
-                adapter_dir: Path = ADAPTER_DIR) -> list[Path]:
+                adapter_dir: Path = ADAPTER_DIR, tier: str | None = None) -> list[Path]:
     intent = yamlio.load(intent_path)
     if targets is None:  # an explicit empty renderTargets means "render nothing"; only None falls back
         targets = intent.get("spec", {}).get("renderTargets", TARGETS)
@@ -103,7 +117,7 @@ def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str]
     written: list[Path] = []
     name = _safe_basename(intent.get("metadata", {}).get("name", "alert"))
     for t in targets:
-        rendered = render_intent(intent, t, adapter_dir)
+        rendered = render_intent(intent, t, adapter_dir, tier=tier)
         ext = "json" if t in ("appdynamics", "thousandeyes") else "yaml" if t in ("grafana", "prometheus") else "conf"
         dest = out_dir / t / f"{name}.{ext}"
         dest.parent.mkdir(parents=True, exist_ok=True)

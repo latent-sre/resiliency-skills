@@ -18,12 +18,17 @@ Assess fault-tolerance as a `Resiliency` artifact (schema:
 
 ## Emit
 
-`.sre-scan/<service>/metadata/resiliency.yaml` with `spec.patterns[].{kind, target, observedIn}` and
-`spec.gaps[]` + the governance block (`ownership: app`).
+`.sre-scan/<service>/metadata/resiliency.yaml` + the governance block (`ownership: app`):
+- `spec.patterns[]` = `{kind, target, observedIn}` **with the load-bearing params** when observable —
+  `retry` → `maxAttempts`/`backoff`/`budget`, `timeout` → `timeoutMs`, `circuit-breaker` →
+  `thresholds`. `kind` also includes `load-shed` and `backpressure`.
+- `spec.gaps[]` = structured `{pattern, target, severity, evidence}` (not free text), so a gap can be
+  joined to its dependency and drive an alert/runbook.
 
 ## Rules
 
 - Distinguish `observedIn: code|config` (evidenced) from `inferred`; inferred patterns get
   `confidence: low`.
-- Record **gaps** (e.g. missing timeout on a critical client) — they are the most useful output, but
-  never assert a gap you cannot evidence.
+- Record **gaps** as structured objects — they are the most useful output. A pattern *without its
+  params* is itself a gap: a `retry` with no `backoff`/`budget` (retry-storm risk) or a `timeout` with
+  no `timeoutMs` is a `severity: high` gap. Never assert a gap you cannot evidence.

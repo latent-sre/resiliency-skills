@@ -10,9 +10,17 @@ spec:
   buildpacks: [java_buildpack_offline]
   routes: [checkout.example.com]
   boundServices: [checkout-postgres, checkout-config]
+  strategy: blue-green
+  autoscale:
+    min: 2
+    max: 10
+    metric: cpu
+  logDrains: ['syslog-tls://logs.example.com:6514']
   healthCheck:
     type: http
     endpoint: /actuator/health
+    timeout: 5
+    invocationTimeout: 10
 provenance:
   repo: github.com/acme/checkout
   commit: 9d779ba

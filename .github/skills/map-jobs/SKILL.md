@@ -17,10 +17,13 @@ common silent-failure source, so they feed alerting and runbooks.
 
 ## Emit
 
-`.sre-scan/<service>/metadata/jobs.yaml` with `spec.jobs[].{name, kind, schedule, trigger}` + the
-governance block (`ownership: app`).
+`.sre-scan/<service>/metadata/jobs.yaml` with `spec.jobs[].{name, kind, schedule, trigger}` — plus
+`timeoutSeconds`, `concurrencyPolicy` (allow/forbid/replace), and `expectedDuration` where observable
+— and the governance block (`ownership: app`).
 
 ## Rules
 
 - Record the **schedule/trigger shape**, never secrets embedded in job config.
 - A job with no observable success signal should be flagged for an alert (note it; lower confidence).
+- Record `timeoutSeconds` and `concurrencyPolicy` for crons — an overlapping or hung cron with no
+  timeout is a classic silent incident.

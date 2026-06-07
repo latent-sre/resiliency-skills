@@ -28,3 +28,9 @@ def test_hostile_name_is_cleaned(tmp_path):
     )
     svc = appnames.discover(tmp_path)["services"][0]
     assert all(c.isalnum() or c in "-_." for c in svc)
+
+
+def test_missing_repo_path_raises(tmp_path):
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        appnames.discover(tmp_path / "does-not-exist")  # must error, not fabricate a service

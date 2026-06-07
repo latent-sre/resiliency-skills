@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/tech-stack.schema.json",
+  "$id": "https://latent-sre/schemas/v1/tech-stack.schema.json",
   "title": "TechStack",
   "type": "object",
   "additionalProperties": false,

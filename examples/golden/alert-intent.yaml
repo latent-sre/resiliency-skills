@@ -24,6 +24,7 @@ spec:
     longWindow: 1h
     factor: 14.4
   severity: sev2
+  class: symptom
   for: 10m
   labels:
     team: payments

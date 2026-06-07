@@ -6,11 +6,18 @@ spec:
     - kind: circuit-breaker
       target: payments-api
       observedIn: code
+      thresholds: open after 5 failures in 10s
     - kind: retry
       target: postgres-main
       observedIn: config
+      maxAttempts: 3
+      backoff: exponential-jitter
+      budget: 10%
   gaps:
-    - no timeout configured on the payments-api client
+    - pattern: timeout
+      target: payments-api
+      severity: high
+      evidence: no timeout configured on the payments-api client
 provenance:
   repo: github.com/acme/checkout
   commit: 9d779ba

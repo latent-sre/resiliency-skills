@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/api-contracts.schema.json",
+  "$id": "https://latent-sre/schemas/v1/api-contracts.schema.json",
   "title": "ApiContracts",
   "type": "object",
   "additionalProperties": false,

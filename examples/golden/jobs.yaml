@@ -6,6 +6,9 @@ spec:
     - name: reconcile-orders
       kind: cron
       schedule: '0 * * * *'
+      timeoutSeconds: 600
+      concurrencyPolicy: forbid
+      expectedDuration: 5m
     - name: expire-carts
       kind: scheduled
       trigger: ttl

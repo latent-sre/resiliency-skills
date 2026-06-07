@@ -16,6 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Require a real CODEOWNERS team (no unreplaced sentinel)
+        # Review is only enforced once a real owning team is set AND branch protection requires Code
+        # Owner review. Fail loud until the sentinel is replaced so the repo can't ship unprotected.
+        run: |
+          if grep -q 'REPLACE_ME__owning_team' .github/CODEOWNERS; then
+            echo "::error::Set the owning team in .github/CODEOWNERS and enable Code-Owner-required branch protection."
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -24,7 +32,7 @@ jobs:
         # in prod; use the vendored offline wheel on air-gapped (PCF) runners.
         run: python -m pip install "$(cat .sre/version)"
       - name: Validate artifacts against vendored schemas
-        run: latent-sre validate --schema-dir .sre/schemas metadata alerts/intent runbooks slos dashboards
+        run: latent-sre validate --schema-dir .sre/schemas {{ artifact_dirs }}
       - name: Fail-closed secret/PII gate (primary)
         run: latent-sre redact .
       - name: Independent OSS second secret gate (detect-secrets)

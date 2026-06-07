@@ -27,17 +27,24 @@ using the `latent-sre/SRE-*`-scoped credential (hosted GitHub MCP). It does not 
 target repo, and it never weakens a gate, fills a sentinel, or sets `needs-human-review: false`. See
 `docs/ownership-boundary.md`.
 
-## The generated repo defends itself
+## The generated repo ships its own defenses (operator must activate)
 
 Each `SRE-<service>` ships:
 - **its own CI** that validates against the *vendored* `.sre/schemas` (decoupled from this repo's
   `main`) and runs the fail-closed redact gate;
-- **`CODEOWNERS`** (with a `REPLACE_ME__owning_team` sentinel) so that — once a real team is set and
-  branch protection requires Code Owner review — AI-drafted updates cannot merge unreviewed;
+- **`CODEOWNERS`** with a `REPLACE_ME__owning_team` sentinel. Review enforcement is **not automatic**:
+  it needs (a) the sentinel replaced with a real team and (b) branch protection requiring Code Owner
+  review. The generated CI **fails closed on the unreplaced sentinel** so a repo can't silently ship
+  unprotected — but only the credentialed publish role can configure branch protection (the scaffold
+  writes files, it cannot configure the repo), so the publish role should set it via the GitHub API at
+  repo-creation time;
 - a **PR template** that restates "AI-drafted, needs human review" and lists the low-confidence /
   sentinel / unverified checks a reviewer must clear.
 
 ## Not overwriting humans
 
-Re-assembly never clobbers human edits: `hash-diff`'s normalized content hash detects a file a human
-has changed and routes the AI re-proposal to `.proposed/` instead of overwriting it.
+Re-assembly never clobbers human edits — enforced **in `assemble`**, not in agent prose. `assemble`
+records a normalized content hash of every file it writes in `.sre/manifest.yaml`; on the next scan a
+live file whose hash diverged (a human edit) is left untouched and the AI re-proposal is written to
+`.proposed/<path>` instead. Cosmetic-only changes (comments, key reordering) are normalized away, so
+they are not mistaken for edits.

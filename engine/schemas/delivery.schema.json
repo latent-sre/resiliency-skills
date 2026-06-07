@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://latent-sre/schemas/delivery.schema.json",
+  "$id": "https://latent-sre/schemas/v1/delivery.schema.json",
   "title": "Delivery",
   "type": "object",
   "additionalProperties": false,

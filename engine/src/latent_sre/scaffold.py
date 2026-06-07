@@ -13,16 +13,16 @@ import re
 import shutil
 from pathlib import Path
 
-from . import SCHEMA_API_VERSION, __version__
+from . import SCHEMA_API_VERSION, __version__, registry
 from .paths import data_dir
 from .render import make_sandbox_env
 
 SCHEMA_DIR = data_dir("schemas")
 TEMPLATE_DIR = data_dir("templates")
 
-_DIRS = [
-    "metadata", "slos", "alerts/intent", "dashboards", "runbooks", "diagrams",
-    ".proposed", ".sre/schemas", ".provenance", ".github/workflows",
+# Artifact destination dirs come from the single registry; the rest are fixed scaffold dirs.
+_DIRS = list(registry.ARTIFACT_DIRS) + [
+    "diagrams", ".proposed", ".sre/schemas", ".provenance", ".github/workflows",
 ]
 
 # template (relative to templates/) -> destination (relative to the new repo root)
@@ -56,7 +56,8 @@ def scaffold(out: str | Path, service: str, schema_dir: Path = SCHEMA_DIR) -> Pa
 
     # render templated repo files
     env = make_sandbox_env(TEMPLATE_DIR)
-    ctx = {"service": service, "version": __version__, "apiVersion": SCHEMA_API_VERSION}
+    ctx = {"service": service, "version": __version__, "apiVersion": SCHEMA_API_VERSION,
+           "artifact_dirs": " ".join(registry.ARTIFACT_DIRS)}
     for tmpl_name, dest_rel in _FILE_TEMPLATES.items():
         dest = root / dest_rel
         dest.parent.mkdir(parents=True, exist_ok=True)
