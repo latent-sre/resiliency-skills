@@ -60,3 +60,11 @@ def test_apiversion_newer_than_engine_is_rejected(tmp_path):
     yamlio.dump(doc, p)
     problems = validate.validate_file(p)
     assert problems and "newer than this engine supports" in problems[0]
+
+
+def test_resiliency_gap_must_be_structured(tmp_path):
+    doc = yamlio.load(GOLDEN / "resiliency.yaml")
+    doc["spec"]["gaps"] = ["just a free-text gap"]  # old string form is no longer allowed
+    p = tmp_path / "r.yaml"
+    yamlio.dump(doc, p)
+    assert validate.validate_file(p)  # gaps are structured {pattern, severity, ...} objects now

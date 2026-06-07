@@ -80,3 +80,27 @@ def test_empty_render_targets_renders_nothing(tmp_path):
         encoding="utf-8",
     )
     assert render.render_file(intent, tmp_path / "out") == []
+
+
+def _min_intent(severity="sev3", klass=None):
+    spec = {"signal": {"type": "metric", "source": "prometheus", "query": "up"},
+            "condition": {"comparator": "<", "threshold": 1}, "severity": severity}
+    if klass:
+        spec["class"] = klass
+    return {"metadata": {"name": "x", "service": "s"}, "spec": spec}
+
+
+def test_tier_raises_severity_floor():
+    intent = _min_intent("sev3")
+    assert '"sev3"' in render.render_intent(intent, "prometheus")                # no tier → declared
+    assert '"sev1"' in render.render_intent(intent, "prometheus", tier="tier0")  # tier0 floors up to sev1
+
+
+def test_tier_floor_never_lowers_severity():
+    intent = _min_intent("sev1")
+    assert '"sev1"' in render.render_intent(intent, "prometheus", tier="tier3")  # floor never lowers
+
+
+def test_alert_class_is_rendered():
+    out = render.render_intent(_min_intent("sev2", klass="cause"), "prometheus")
+    assert "class:" in out and '"cause"' in out

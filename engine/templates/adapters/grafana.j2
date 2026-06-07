@@ -10,9 +10,10 @@ groups:
         for: {{ for | tojson }}
         labels:
           severity: {{ severity | tojson }}
+          class: {{ severity_class | tojson }}
           ownership: {{ ownership | tojson }}
         annotations:
           summary: {{ summary | tojson }}
           runbook_url: {{ runbook | tojson }}
-        # signal {{ comparator | sanitize }} {{ threshold | tojson }} over {{ window | tojson }}
+        # signal {{ comparator | sanitize }} {{ threshold | tojson }} over {{ window | tojson }}{% if occurrences %}, x{{ occurrences }} occurrences{% endif %}
         # query: {{ query | tojson }}

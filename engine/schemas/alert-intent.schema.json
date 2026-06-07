@@ -61,6 +61,7 @@
           }
         },
         "severity": { "enum": ["sev1", "sev2", "sev3"] },
+        "class": { "enum": ["symptom", "cause"] },
         "for": { "type": "string" },
         "labels": { "type": "object", "additionalProperties": { "type": "string" } },
         "annotations": { "type": "object", "additionalProperties": { "type": "string" } },

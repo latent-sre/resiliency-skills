@@ -20,13 +20,31 @@
             "additionalProperties": false,
             "required": ["kind", "observedIn"],
             "properties": {
-              "kind": { "enum": ["retry", "circuit-breaker", "timeout", "bulkhead", "fallback", "rate-limit", "idempotency"] },
+              "kind": { "enum": ["retry", "circuit-breaker", "timeout", "bulkhead", "fallback", "rate-limit", "idempotency", "load-shed", "backpressure"] },
               "target": { "type": "string" },
-              "observedIn": { "enum": ["code", "config", "inferred"] }
+              "observedIn": { "enum": ["code", "config", "inferred"] },
+              "maxAttempts": { "type": "integer", "minimum": 0 },
+              "backoff": { "enum": ["none", "fixed", "exponential", "exponential-jitter"] },
+              "budget": { "type": "string" },
+              "timeoutMs": { "type": "integer", "minimum": 0 },
+              "thresholds": { "type": "string" }
             }
           }
         },
-        "gaps": { "type": "array", "items": { "type": "string" } }
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pattern", "severity"],
+            "properties": {
+              "pattern": { "enum": ["retry", "circuit-breaker", "timeout", "bulkhead", "fallback", "rate-limit", "idempotency", "load-shed", "backpressure"] },
+              "target": { "type": "string" },
+              "severity": { "enum": ["high", "medium", "low"] },
+              "evidence": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "provenance": { "$ref": "#/$defs/provenance" },

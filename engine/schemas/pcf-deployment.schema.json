@@ -21,12 +21,25 @@
         "buildpacks": { "type": "array", "items": { "type": "string" } },
         "routes": { "type": "array", "items": { "type": "string" } },
         "boundServices": { "type": "array", "items": { "type": "string" } },
+        "strategy": { "enum": ["rolling", "blue-green", "canary", "recreate", "unknown"] },
+        "autoscale": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 },
+            "metric": { "type": "string" }
+          }
+        },
+        "logDrains": { "type": "array", "items": { "type": "string" } },
         "healthCheck": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "type": { "enum": ["port", "http", "process"] },
-            "endpoint": { "type": "string" }
+            "endpoint": { "type": "string" },
+            "timeout": { "type": "integer", "minimum": 0 },
+            "invocationTimeout": { "type": "integer", "minimum": 0 }
           }
         }
       }

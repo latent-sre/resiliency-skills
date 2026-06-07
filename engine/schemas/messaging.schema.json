@@ -30,7 +30,11 @@
       "required": ["name", "kind"],
       "properties": {
         "name": { "type": "string" },
-        "kind": { "enum": ["topic", "queue", "stream"] }
+        "kind": { "enum": ["topic", "queue", "stream"] },
+        "dlq": { "type": "string" },
+        "maxRedelivery": { "type": "integer", "minimum": 0 },
+        "ordering": { "enum": ["none", "partition", "global"] },
+        "idempotentConsumer": { "type": "boolean" }
       }
     },
     "provenance": {

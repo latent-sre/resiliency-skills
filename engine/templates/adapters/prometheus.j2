@@ -8,7 +8,9 @@ groups:
         for: {{ for | tojson }}
         labels:
           severity: {{ severity | tojson }}
+          class: {{ severity_class | tojson }}
           ownership: {{ ownership | tojson }}
         annotations:
           summary: {{ summary | tojson }}
           runbook_url: {{ runbook | tojson }}
+        # debounce: for {{ for | tojson }}{% if occurrences %} / require {{ occurrences }} occurrences{% endif %}

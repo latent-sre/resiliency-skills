@@ -67,15 +67,16 @@ def _copy(src: Path, dest: Path) -> Path:
     return dest
 
 
-def _stage_artifact(kind: str, path: Path, stage: Path) -> list[Path]:
+def _stage_artifact(kind: str, path: Path, stage: Path, tier: str | None = None) -> list[Path]:
     """Render/copy one artifact into an isolated staging dir; return the files it produced.
-    Destination + renderer come from the single registry (no per-kind branches to keep in sync)."""
+    Destination + renderer come from the single registry (no per-kind branches to keep in sync).
+    `tier` (the service's Criticality tier) sets the alert severity floor."""
     spec = registry.BY_KIND.get(kind)
     if spec is None:
         return []
     produced = [_copy(path, stage / spec.dest / path.name)]
     if spec.renderer == "alert":
-        produced += render.render_file(path, stage / "alerts")
+        produced += render.render_file(path, stage / "alerts", tier=tier)
     elif spec.renderer == "runbook":
         produced.append(runbook.render_runbook_file(path, stage / "runbooks"))
     elif spec.renderer == "dashboard":
@@ -102,6 +103,7 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
     scan_dir, out_dir = Path(scan_dir), Path(out_dir)
     docs = _load_artifacts(scan_dir)
     service = scaffold.clean_service(service or _infer_service(docs))
+    tier = next((d.get("tier") for _, d in docs if d.get("kind") == "Criticality"), None)
     root = scaffold.scaffold(out_dir, service)
     res = AssembleResult(root=root, service=service)
 
@@ -121,7 +123,7 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
 
         for i, (path, doc) in enumerate(docs):
             stage_i = staging / str(i)
-            for o in _stage_artifact(doc["kind"], path, stage_i):
+            for o in _stage_artifact(doc["kind"], path, stage_i, tier):
                 _claim(str(o.relative_to(stage_i)), o)
             if doc["kind"] == "Dependencies":
                 deps_path = path

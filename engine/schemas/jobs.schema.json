@@ -23,7 +23,10 @@
               "name": { "type": "string" },
               "kind": { "enum": ["cron", "batch", "worker", "scheduled"] },
               "schedule": { "type": "string" },
-              "trigger": { "type": "string" }
+              "trigger": { "type": "string" },
+              "timeoutSeconds": { "type": "integer", "minimum": 0 },
+              "concurrencyPolicy": { "enum": ["allow", "forbid", "replace"] },
+              "expectedDuration": { "type": "string" }
             }
           }
         }

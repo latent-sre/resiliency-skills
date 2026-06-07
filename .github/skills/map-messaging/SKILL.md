@@ -20,9 +20,12 @@ Record async messaging as a `Messaging` artifact (schema:
 ## Emit
 
 `.sre-scan/<service>/metadata/messaging.yaml` with `spec.{brokers[], produces[], consumes[]}` (each
-channel `{name, kind}`) + the governance block (`ownership: app`).
+channel `{name, kind}`, plus `dlq`, `maxRedelivery`, `ordering`, `idempotentConsumer` where
+observable) + the governance block (`ownership: app`).
 
 ## Rules
 
 - Record channel **names and kinds** only — never broker credentials or connection URIs.
 - Inferred (non-observable) channels get `confidence: low`.
+- Record **DLQ / redelivery / ordering / idempotent-consumer** where observable — they pair with
+  `assess-resiliency` for retry-storm and double-processing (duplicate-charge) analysis.

@@ -73,3 +73,14 @@ def test_duplicate_output_names_are_flagged_not_silently_clobbered(tmp_path):
     res = assemble.assemble(scan, tmp_path / "out")
     assert not res.ok
     assert any("collision" in v for v in res.validation)
+
+
+def test_assemble_floors_alert_severity_by_criticality_tier(tmp_path):
+    scan = _scan(tmp_path)
+    crit = scan / "criticality.yaml"
+    d = yamlio.load(crit)
+    d["tier"] = "tier0"  # tier0 -> sev1 floor; the golden alert is sev2
+    yamlio.dump(d, crit)
+    res = assemble.assemble(scan, tmp_path / "out")
+    prom = (res.root / "alerts" / "prometheus" / "checkout-high-error-rate.yaml").read_text()
+    assert '"sev1"' in prom  # severity raised to the tier0 floor
