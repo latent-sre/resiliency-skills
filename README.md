@@ -47,13 +47,15 @@ latent-sre app-names <repo>          # deployable services (monorepo fan-out, ca
 latent-sre plan <repo>               # per-service scan plan: canonical pipeline x fan-out, resumable
 latent-sre mermaid <deps.yaml>       # dependency graph (untrusted labels sanitized)
 latent-sre hash-diff <path>          # normalized content hash (clobber-protection)
-latent-sre scan-state <path> --skill # resumable checkpoint
+latent-sre scan-state <path> --service <s> --skill <k>  # read a per-service resume checkpoint
 ```
 
 `assemble` is the deterministic core of the publish role: it scaffolds a hardened repo, copies the
 neutral metadata, renders the alert adapters + runbooks + dependency diagram, then re-runs validation
-(against the *vendored* schemas) and the fail-closed redact gate. Opening the cross-repo PR is the
-only step left to the credentialed publish role. See [`docs/publish-path.md`](docs/publish-path.md).
+(against the *vendored* schemas) and the fail-closed redact gate. It **never clobbers a human edit**
+(a diverged file is routed to `.proposed/`, tracked in `.sre/manifest.yaml`) and reports output-name
+collisions. Opening the cross-repo PR is the only step left to the credentialed publish role. See
+[`docs/publish-path.md`](docs/publish-path.md).
 
 Develop & test the engine:
 

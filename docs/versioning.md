@@ -35,10 +35,12 @@ SRE-<service>/.sre/version          # e.g. latent-sre==0.1.0
 So the generated repo's own CI validates against the contract it was **born with**, decoupled from
 this repo's `main`. This prevents a schema change here from retroactively failing every downstream
 repo. Renovate (or the next scan) bumps the pin deliberately, as a reviewed PR — at which point any
-required migration is applied and re-validated.
+required migration is applied and re-validated. Each schema's `$id` is versioned
+(`…/schemas/v1/<name>.schema.json`), so a future `v2` set cannot collide with `v1` in a shared validator.
 
 ## Compatibility rules
 
-1. CI refuses to publish if an artifact's `apiVersion` is newer than the engine understands.
+1. CI refuses to publish if an artifact's `apiVersion` major is newer than the engine understands —
+   enforced by the `latent-sre validate` gate (a clear "newer than this engine supports" error).
 2. Within an `apiVersion`, the engine reads older minor artifacts (additive fields are optional).
 3. A major/`apiVersion` bump requires a migration note in the PR and a re-vendor of `.sre/schemas`.
