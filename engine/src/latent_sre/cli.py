@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("render-adapters", help="render a neutral AlertIntent to tool configs")
     s.add_argument("intent"); s.add_argument("--out", required=True)
-    s.add_argument("--targets", nargs="*"); s.set_defaults(fn=_cmd_render)
+    s.add_argument("--targets", nargs="*", choices=render.TARGETS); s.set_defaults(fn=_cmd_render)
 
     s = sub.add_parser("render-runbook", help="render a neutral RunbookSpec to Markdown")
     s.add_argument("spec"); s.add_argument("--out", required=True); s.set_defaults(fn=_cmd_render_runbook)

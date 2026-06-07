@@ -84,3 +84,80 @@ def test_assemble_floors_alert_severity_by_criticality_tier(tmp_path):
     res = assemble.assemble(scan, tmp_path / "out")
     prom = (res.root / "alerts" / "prometheus" / "checkout-high-error-rate.yaml").read_text()
     assert '"sev1"' in prom  # severity raised to the tier0 floor
+
+
+def test_reassembly_preserves_operator_codeowners_edit(tmp_path):
+    # H1: scaffold's operator-facing files must be clobber-protected too (was unconditionally rewritten)
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)
+    co = out / ".github" / "CODEOWNERS"
+    edited = "* @acme/payments-team\n"
+    co.write_text(edited, encoding="utf-8")           # operator sets the real owning team
+    assemble.assemble(scan, out)                       # re-scan
+    assert co.read_text() == edited                    # NOT reverted to the REPLACE_ME__ sentinel
+    assert (out / ".proposed" / ".github" / "CODEOWNERS").is_file()  # engine draft proposed instead
+
+
+def test_hostile_render_targets_does_not_crash_and_is_flagged(tmp_path):
+    # H2: an unknown renderTargets value must not raise out of assemble (render before validate)
+    scan = tmp_path / "scan"
+    scan.mkdir()
+    intent = yamlio.load(GOLDEN / "alert-intent.yaml")
+    intent["spec"]["renderTargets"] = ["evil-target"]
+    yamlio.dump(intent, scan / "a.yaml")
+    res = assemble.assemble(scan, tmp_path / "out")    # must not raise
+    assert not res.ok                                   # schema validation flags the bad renderTargets
+
+
+def test_malformed_human_edit_does_not_crash_assemble(tmp_path):
+    # H3: the clobber-protection path itself must not crash on a human's broken-YAML edit
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)
+    crit = out / "metadata" / "criticality.yaml"
+    crit.write_text("{{{ not valid yaml :::\n", encoding="utf-8")
+    assemble.assemble(scan, out)                        # must not raise
+    assert crit.read_text().startswith("{{{")           # broken human edit preserved, not clobbered
+
+
+def test_orphaned_ai_output_is_pruned(tmp_path):
+    # H4: outputs whose producing artifact disappeared are removed on the next scan
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)
+    assert (out / "dashboards" / "dashboard.json").is_file()
+    (scan / "dashboard.yaml").unlink()                  # producing artifact removed
+    res = assemble.assemble(scan, out)
+    assert not (out / "dashboards" / "dashboard.json").is_file()   # rendered orphan pruned
+    assert not (out / "dashboards" / "dashboard.yaml").is_file()   # copied-source orphan pruned
+    assert any("dashboard" in p.name for p in res.removed)
+
+
+def test_orphan_pruning_keeps_human_edited_file(tmp_path):
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)
+    rb = out / "runbooks" / "runbook-spec.md"
+    rb.write_text(rb.read_text() + "\n<!-- mine -->\n", encoding="utf-8")  # human edit
+    (scan / "runbook-spec.yaml").unlink()              # producing artifact removed
+    assemble.assemble(scan, out)
+    assert rb.is_file()                                 # human-edited orphan is NOT deleted
+
+
+def test_corrupt_manifest_does_not_crash(tmp_path):
+    # L1: a corrupt .sre/manifest.yaml must be tolerated, not crash assemble
+    scan = _scan(tmp_path)
+    out = tmp_path / "SRE-checkout"
+    assemble.assemble(scan, out)
+    (out / ".sre" / "manifest.yaml").write_text("{{{ broken manifest", encoding="utf-8")
+    res = assemble.assemble(scan, out)                 # must not raise
+    assert res.written
+
+
+def test_multiple_dependencies_artifacts_flagged(tmp_path):
+    # L3: more than one Dependencies artifact is reported (was silently last-wins)
+    scan = _scan(tmp_path)
+    yamlio.dump(yamlio.load(GOLDEN / "dependencies.yaml"), scan / "dependencies-2.yaml")
+    res = assemble.assemble(scan, tmp_path / "out")
+    assert any("multiple Dependencies" in v for v in res.validation)

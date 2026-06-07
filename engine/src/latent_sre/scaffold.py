@@ -6,6 +6,11 @@ The generated repo:
 * ships its own least-privilege CI (validate vs vendored schemas + fail-closed redact);
 * ships CODEOWNERS + a PR template so AI-drafted updates cannot merge unreviewed;
 * ships a Backstage ``catalog-info.yaml`` and a provenance-stamped README banner.
+
+The operator-facing files (CODEOWNERS, README, …) are returned by ``repo_files()`` so ``assemble``
+can route them through clobber-protection — a re-scan must never revert an operator's owning-team or
+README edit. The standalone ``scaffold`` command writes them directly (with a manifest, so a later
+``assemble`` still preserves edits).
 """
 from __future__ import annotations
 
@@ -13,7 +18,7 @@ import re
 import shutil
 from pathlib import Path
 
-from . import SCHEMA_API_VERSION, __version__, registry
+from . import SCHEMA_API_VERSION, __version__, hashdiff, registry, yamlio
 from .paths import data_dir
 from .render import make_sandbox_env
 
@@ -42,26 +47,43 @@ def clean_service(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]", "-", str(s)).strip("-")[:63] or "service"
 
 
-def scaffold(out: str | Path, service: str, schema_dir: Path = SCHEMA_DIR) -> Path:
+def _render_repo_files(service: str) -> dict[str, str]:
+    env = make_sandbox_env(TEMPLATE_DIR)
+    ctx = {"service": service, "version": __version__, "apiVersion": SCHEMA_API_VERSION,
+           "artifact_dirs": " ".join(registry.ARTIFACT_DIRS)}
+    return {dest_rel: env.get_template(tmpl).render(**ctx) for tmpl, dest_rel in _FILE_TEMPLATES.items()}
+
+
+def repo_files(service: str) -> dict[str, str]:
+    """The operator-facing repo files as ``{repo-relative path: content}`` (not written to disk), so
+    a caller (``assemble``) can merge them with clobber-protection."""
+    return _render_repo_files(clean_service(service))
+
+
+def scaffold(out: str | Path, service: str, schema_dir: Path = SCHEMA_DIR,
+             write_repo_files: bool = True) -> Path:
     service = clean_service(service)
     root = Path(out)
     for d in _DIRS:
         (root / d).mkdir(parents=True, exist_ok=True)
 
-    # vendor pinned schemas + engine version
+    # vendor pinned schemas + engine version (engine-owned: always refreshed)
     if schema_dir.is_dir():
         for s in schema_dir.glob("*.schema.json"):
             shutil.copy2(s, root / ".sre" / "schemas" / s.name)
     (root / ".sre" / "version").write_text(f"latent-sre=={__version__}\n", encoding="utf-8")
 
-    # render templated repo files
-    env = make_sandbox_env(TEMPLATE_DIR)
-    ctx = {"service": service, "version": __version__, "apiVersion": SCHEMA_API_VERSION,
-           "artifact_dirs": " ".join(registry.ARTIFACT_DIRS)}
-    for tmpl_name, dest_rel in _FILE_TEMPLATES.items():
-        dest = root / dest_rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(env.get_template(tmpl_name).render(**ctx), encoding="utf-8")
+    # Operator-facing files: written directly for a standalone scaffold (with a manifest so a later
+    # `assemble` preserves any edits). `assemble` passes write_repo_files=False and clobber-protects them.
+    if write_repo_files:
+        hashes: dict[str, str] = {}
+        for rel, content in _render_repo_files(service).items():
+            dest = root / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(content, encoding="utf-8")
+            hashes[rel] = hashdiff.content_hash(dest)
+        yamlio.dump({"apiVersion": SCHEMA_API_VERSION, "kind": "AssembleManifest", "hashes": hashes},
+                    root / ".sre" / "manifest.yaml")
 
     (root / ".provenance" / "scan.yaml").write_text(
         "apiVersion: sre.latent-sre/v1\n"
