@@ -50,8 +50,9 @@ The deterministic surface is the `latent-sre` CLI (run by CI, not by you):
 
 - Monorepos: one `SRE-<service>` per deployable service. Fan-out is **capped** (`app-names`); above
   the cap requires explicit human confirmation — never mass-create.
-- Long scans are resumable via `scan-state` checkpoints; never overwrite human edits — the engine
-  routes diverged files to `.proposed/` via normalized content hashing.
+- Long scans are resumable via per-service `scan-state` checkpoints; never overwrite human edits —
+  the engine's `assemble` routes a diverged file to `.proposed/` (tracked in `.sre/manifest.yaml`)
+  instead of clobbering it.
 
 ## Precondition
 
