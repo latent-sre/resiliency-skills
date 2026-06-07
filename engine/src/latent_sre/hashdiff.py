@@ -35,8 +35,3 @@ def content_hash(path: str | Path) -> str:
     else:
         canonical = p.read_text(encoding="utf-8")
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def is_human_edited(path: str | Path, recorded_hash: str) -> bool:
-    """True if the live file diverges from the last AI-written hash → route to .proposed/."""
-    return content_hash(path) != recorded_hash

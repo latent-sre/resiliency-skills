@@ -117,6 +117,9 @@ def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str]
     written: list[Path] = []
     name = _safe_basename(intent.get("metadata", {}).get("name", "alert"))
     for t in targets:
+        if t not in TARGETS:
+            continue  # unknown target from an (untrusted) artifact's renderTargets — skip rather than
+                      # crash; schema validation of the artifact flags it (the CLI validates --targets).
         rendered = render_intent(intent, t, adapter_dir, tier=tier)
         ext = "json" if t in ("appdynamics", "thousandeyes") else "yaml" if t in ("grafana", "prometheus") else "conf"
         dest = out_dir / t / f"{name}.{ext}"
