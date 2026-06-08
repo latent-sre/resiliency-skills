@@ -35,6 +35,13 @@ def test_blocks_value_shape():
     assert any(f.rule in ("value-shape", "high-entropy") for f in findings)
 
 
+def test_value_shape_not_bypassed_by_trailing_comment():
+    # A YAML inline comment must not let a secret slip past the value-shape rule (regression: the
+    # comment's leading space previously broke the opaque-value match, silently passing the gate).
+    findings = _findings("db_password: s3cretValueWithLength  # prod credential")
+    assert any(f.rule == "value-shape" for f in findings)
+
+
 def test_clean_text_passes():
     clean = (
         "apiVersion: sre.latent-sre/v1\n"
