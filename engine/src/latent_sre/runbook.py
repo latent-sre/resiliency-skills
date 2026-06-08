@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__, yamlio
 from .paths import data_dir
-from .render import make_sandbox_env
+from .templating import make_sandbox_env
 
 TEMPLATE_DIR = data_dir("templates")
 _SPEC_SUFFIXES = (".runbookspec.yaml", ".runbookspec.yml", ".yaml", ".yml")

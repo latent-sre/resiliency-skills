@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from . import yamlio
-from .render import sentinel
+from .templating import sentinel
 
 _SPEC_SUFFIXES = (".dashboard.yaml", ".dashboard.yml", ".yaml", ".yml")
 

@@ -10,20 +10,15 @@ so an accidental apply FAILS LOUD instead of silently targeting the wrong system
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
-from jinja2 import FileSystemLoader, StrictUndefined
-from jinja2.sandbox import SandboxedEnvironment
-
 from . import yamlio
 from .paths import data_dir
+from .templating import make_sandbox_env, sentinel
 
 ADAPTER_DIR = data_dir("templates") / "adapters"
 TARGETS = ["grafana", "prometheus", "splunk", "wavefront", "appdynamics", "thousandeyes"]
-
-_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 _SEV_RANK = {"sev1": 1, "sev2": 2, "sev3": 3}
 TIER_SEVERITY_FLOOR = {"tier0": "sev1", "tier1": "sev2", "tier2": "sev3", "tier3": "sev3"}
@@ -36,35 +31,6 @@ def _effective_severity(declared: str, tier: str | None) -> str:
     if not floor:
         return declared
     return declared if _SEV_RANK.get(declared, 3) <= _SEV_RANK.get(floor, 3) else floor
-
-
-def _sanitize(v: object) -> str:
-    """Collapse newlines/control chars so an untrusted value can't inject new lines/stanzas into a
-    line-oriented config (Splunk .conf, Wavefront). Length-capped."""
-    return _CONTROL.sub(" ", str(v))[:2000]
-
-
-def make_sandbox_env(template_dir: Path) -> SandboxedEnvironment:
-    """Shared sandboxed Jinja2 env for all deterministic rendering (alerts, runbooks, repo files).
-
-    Sandboxed (blocks template-level attacks); autoescape OFF because outputs are config/markdown
-    formats, not HTML — per-value escaping is done with `tojson` (JSON/YAML) or `sanitize` (line- or
-    list-oriented text).
-    """
-    env = SandboxedEnvironment(
-        loader=FileSystemLoader(str(template_dir)),
-        autoescape=False,
-        undefined=StrictUndefined,
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-    env.filters["tojson"] = lambda v: json.dumps(v)
-    env.filters["sanitize"] = _sanitize
-    return env
-
-
-def sentinel(field: str) -> str:
-    return f"REPLACE_ME__{field}"
 
 
 def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR, tier: str | None = None) -> str:
