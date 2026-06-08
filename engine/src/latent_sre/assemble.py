@@ -117,6 +117,92 @@ def _live_hash(path: Path) -> str | None:
         return None
 
 
+def _stage_all(docs: list[tuple[Path, dict]], service: str, tier: str | None,
+               staging: Path) -> tuple[dict[str, Path], list[str]]:
+    """Phase 1 — render/copy every output into an isolated per-artifact staging tree so two artifacts
+    resolving to the same output path are detected as a collision instead of silently overwriting.
+    Returns ``{output-rel-path: staged source}`` plus any collision/multiplicity problems."""
+    produced: dict[str, Path] = {}
+    collisions: set[str] = set()
+    problems: list[str] = []
+
+    def _claim(rel: str, src: Path) -> None:
+        if rel in produced:
+            collisions.add(rel)
+        else:
+            produced[rel] = src
+
+    for i, (path, doc) in enumerate(docs):
+        stage_i = staging / str(i)
+        for o in _stage_artifact(doc["kind"], path, stage_i, tier):
+            _claim(str(o.relative_to(stage_i)), o)
+
+    deps_paths = [p for p, d in docs if d["kind"] == "Dependencies"]
+    if len(deps_paths) > 1:
+        problems.append(
+            f"multiple Dependencies artifacts ({len(deps_paths)}); diagram uses {deps_paths[0].name}")
+    if deps_paths:
+        d = staging / "_deps" / "diagrams" / f"{service}-dependencies.md"
+        d.parent.mkdir(parents=True, exist_ok=True)
+        d.write_text(f"# {service} dependencies\n\n{mermaid.from_dependencies(deps_paths[0])}\n",
+                     encoding="utf-8")
+        _claim(str(d.relative_to(staging / "_deps")), d)
+
+    # The scaffold's operator-facing files (CODEOWNERS, README, CI, …) go through the SAME
+    # clobber-protection, so a re-scan refreshes an untouched file but never reverts an edited one.
+    repo_stage = staging / "_repo"
+    for rel, content in scaffold.repo_files(service).items():
+        fp = repo_stage / rel
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text(content, encoding="utf-8")
+        _claim(rel, fp)
+
+    for rel in sorted(collisions):
+        problems.append(f"output name collision: {rel} produced by multiple artifacts")
+    return produced, problems
+
+
+def _merge_with_protection(produced: dict[str, Path], root: Path, res: AssembleResult) -> None:
+    """Phase 2+3 — merge staging into the repo, routing files that diverged from the hash we last
+    wrote (a human edit) to ``.proposed/`` instead of clobbering them, then prune orphaned AI outputs.
+    Tracked in ``.sre/manifest.yaml``."""
+    manifest_path = root / ".sre" / "manifest.yaml"
+    try:
+        mdoc = (yamlio.load(manifest_path) or {}) if manifest_path.is_file() else {}
+    except Exception:
+        mdoc = {}  # corrupt manifest → re-derive rather than crash
+    recorded = mdoc.get("hashes", {}) if isinstance(mdoc, dict) else {}
+    hashes: dict[str, str] = dict(recorded)
+
+    for rel in sorted(produced):
+        staged, dest = produced[rel], root / rel
+        content = staged.read_text(encoding="utf-8")
+        if dest.is_file() and rel in recorded and _live_hash(dest) != recorded[rel]:
+            proposed = root / ".proposed" / rel       # human edit (even a broken one) → preserve live
+            proposed.parent.mkdir(parents=True, exist_ok=True)
+            proposed.write_text(content, encoding="utf-8")
+            res.proposed.append(proposed)             # keep old recorded hash → keep detecting divergence
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(content, encoding="utf-8")
+            res.written.append(dest)
+            hashes[rel] = hashdiff.content_hash(dest)
+
+    # Prune outputs for artifacts no longer produced (orphans) — but never delete a human edit.
+    for rel in sorted(set(recorded) - set(produced)):
+        dest = root / rel
+        if not dest.is_file():
+            hashes.pop(rel, None)
+        elif _live_hash(dest) == recorded.get(rel):   # still the AI-written version → safe to remove
+            dest.unlink()
+            hashes.pop(rel, None)
+            res.removed.append(dest)
+        # else: a human-edited orphan → leave the file (and its manifest entry) in place
+
+    yamlio.dump({"apiVersion": SCHEMA_API_VERSION, "kind": "AssembleManifest", "hashes": hashes},
+                manifest_path)
+
+
 def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = None) -> AssembleResult:
     scan_dir, out_dir = Path(scan_dir), Path(out_dir)
     docs, load_problems = _load_artifacts(scan_dir)
@@ -127,87 +213,16 @@ def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = No
     res = AssembleResult(root=root, service=service)
     res.validation.extend(load_problems)  # a parse failure is fail-closed, not a silent drop
 
-    # 1. Render/copy everything into an isolated per-artifact staging tree, so two artifacts that
-    #    resolve to the same output path are detected as a collision instead of silently overwriting.
     staging = Path(tempfile.mkdtemp(prefix="latent-sre-asm-"))
     try:
-        produced: dict[str, Path] = {}
-        collisions: set[str] = set()
-
-        def _claim(rel: str, src: Path) -> None:
-            if rel in produced:
-                collisions.add(rel)
-            else:
-                produced[rel] = src
-
-        for i, (path, doc) in enumerate(docs):
-            stage_i = staging / str(i)
-            for o in _stage_artifact(doc["kind"], path, stage_i, tier):
-                _claim(str(o.relative_to(stage_i)), o)
-
-        deps_paths = [p for p, d in docs if d["kind"] == "Dependencies"]
-        if len(deps_paths) > 1:
-            res.validation.append(
-                f"multiple Dependencies artifacts ({len(deps_paths)}); diagram uses {deps_paths[0].name}")
-        if deps_paths:
-            d = staging / "_deps" / "diagrams" / f"{service}-dependencies.md"
-            d.parent.mkdir(parents=True, exist_ok=True)
-            d.write_text(f"# {service} dependencies\n\n{mermaid.from_dependencies(deps_paths[0])}\n",
-                         encoding="utf-8")
-            _claim(str(d.relative_to(staging / "_deps")), d)
-
-        # The scaffold's operator-facing files (CODEOWNERS, README, CI, …) go through the SAME
-        # clobber-protection, so a re-scan refreshes an untouched file but never reverts an edited one.
-        repo_stage = staging / "_repo"
-        for rel, content in scaffold.repo_files(service).items():
-            fp = repo_stage / rel
-            fp.parent.mkdir(parents=True, exist_ok=True)
-            fp.write_text(content, encoding="utf-8")
-            _claim(rel, fp)
-
-        for rel in sorted(collisions):
-            res.validation.append(f"output name collision: {rel} produced by multiple artifacts")
-
-        # 2. Merge staging -> root with clobber-protection (tracked in .sre/manifest.yaml).
-        manifest_path = root / ".sre" / "manifest.yaml"
-        try:
-            mdoc = (yamlio.load(manifest_path) or {}) if manifest_path.is_file() else {}
-        except Exception:
-            mdoc = {}  # corrupt manifest → re-derive rather than crash
-        recorded = mdoc.get("hashes", {}) if isinstance(mdoc, dict) else {}
-        hashes: dict[str, str] = dict(recorded)
-        for rel in sorted(produced):
-            staged, dest = produced[rel], root / rel
-            content = staged.read_text(encoding="utf-8")
-            if dest.is_file() and rel in recorded and _live_hash(dest) != recorded[rel]:
-                proposed = root / ".proposed" / rel       # human edit (even a broken one) → preserve live
-                proposed.parent.mkdir(parents=True, exist_ok=True)
-                proposed.write_text(content, encoding="utf-8")
-                res.proposed.append(proposed)             # keep old recorded hash → keep detecting divergence
-            else:
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_text(content, encoding="utf-8")
-                res.written.append(dest)
-                hashes[rel] = hashdiff.content_hash(dest)
-
-        # 3. Prune outputs for artifacts no longer produced (orphans) — but never delete a human edit.
-        for rel in sorted(set(recorded) - set(produced)):
-            dest = root / rel
-            if not dest.is_file():
-                hashes.pop(rel, None)
-            elif _live_hash(dest) == recorded.get(rel):   # still the AI-written version → safe to remove
-                dest.unlink()
-                hashes.pop(rel, None)
-                res.removed.append(dest)
-            # else: a human-edited orphan → leave the file (and its manifest entry) in place
-
-        yamlio.dump({"apiVersion": SCHEMA_API_VERSION, "kind": "AssembleManifest", "hashes": hashes},
-                    manifest_path)
+        produced, stage_problems = _stage_all(docs, service, tier, staging)
+        res.validation.extend(stage_problems)
+        _merge_with_protection(produced, root, res)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 
-    # 4. Final gates: schema-validate source artifacts against the VENDORED schemas, sanity-check the
-    #    rendered deliverables, then run the fail-closed redact gate over the whole tree.
+    # Final gates: schema-validate source artifacts against the VENDORED schemas, sanity-check the
+    # rendered deliverables, then run the fail-closed redact gate over the whole tree.
     vendored = root / ".sre" / "schemas"
     for sub in registry.ARTIFACT_DIRS:
         d = root / sub

@@ -170,3 +170,24 @@ def test_multiple_dependencies_artifacts_flagged(tmp_path):
     yamlio.dump(yamlio.load(GOLDEN / "dependencies.yaml"), scan / "dependencies-2.yaml")
     res = assemble.assemble(scan, tmp_path / "out")
     assert any("multiple Dependencies" in v for v in res.validation)
+
+
+def test_merge_with_protection_routes_diverged_file_to_proposed(tmp_path):
+    # Unit-level check of the extracted clobber-protection helper, in isolation from a full scan.
+    root = tmp_path / "repo"
+    (root / ".sre").mkdir(parents=True)
+    staged = tmp_path / "stage"
+    staged.mkdir()
+    (staged / "a.txt").write_text("v1", encoding="utf-8")
+
+    res1 = assemble.AssembleResult(root=root, service="s")
+    assemble._merge_with_protection({"a.txt": staged / "a.txt"}, root, res1)
+    assert (root / "a.txt").read_text() == "v1" and res1.written
+
+    (root / "a.txt").write_text("human edit", encoding="utf-8")  # operator diverges the live file
+    (staged / "a.txt").write_text("v2", encoding="utf-8")
+    res2 = assemble.AssembleResult(root=root, service="s")
+    assemble._merge_with_protection({"a.txt": staged / "a.txt"}, root, res2)
+    assert (root / "a.txt").read_text() == "human edit"            # never clobbered
+    assert (root / ".proposed" / "a.txt").read_text() == "v2"      # new draft routed aside
+    assert res2.proposed and not res2.written
