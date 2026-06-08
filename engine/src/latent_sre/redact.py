@@ -127,18 +127,21 @@ def scan_text(text: str, path: str = "<text>", allow: list[str] | None = None) -
             if _entropy_candidate(tok) and shannon_entropy(tok) >= ENTROPY_MIN_BITS:
                 findings.append(Finding(path, i, "high-entropy", _redacted(tok)))
 
-        # 3. Value-shape
+        # 3. Value-shape. Test the first whitespace-delimited token of the value, not the whole
+        # remainder: a trailing inline comment (`secret  # note` — a comment in YAML/conf needs
+        # preceding whitespace) would otherwise add a space and make the opaque-value match fail,
+        # silently slipping the secret past this gate.
         if ":" in line:
             key, _, value = line.partition(":")
-            value = value.strip()
+            token = value.strip().split(maxsplit=1)[0] if value.strip() else ""
             if (
                 _is_secretish_key(key)
-                and value
-                and not value.startswith(SENTINEL_PREFIX)
-                and OPAQUE_VALUE.match(value)
-                and not PLACEHOLDERISH.search(value)
+                and token
+                and not token.startswith(SENTINEL_PREFIX)
+                and OPAQUE_VALUE.match(token)
+                and not PLACEHOLDERISH.search(token)
             ):
-                findings.append(Finding(path, i, "value-shape", f"{key.strip()}: {_redacted(value)}"))
+                findings.append(Finding(path, i, "value-shape", f"{key.strip()}: {_redacted(token)}"))
 
     # de-duplicate (a line can trip multiple rules on the same token)
     seen: set[tuple] = set()

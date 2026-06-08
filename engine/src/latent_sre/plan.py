@@ -31,15 +31,17 @@ def make_plan(repo: str | Path, pipeline_path: str | Path | None = None,
     disc = appnames.discover(repo)
     ordered = _ordered_skills(load_pipeline(pipeline_path))
 
+    # Load the checkpoint once and index in-memory; calling scanstate.get per (service, skill) would
+    # re-read and re-parse the whole file O(services x skills) times.
+    state_services = scanstate.load_state(scan_state_path).get("services", {}) if scan_state_path else {}
+
     services = []
     for svc in disc["services"]:
+        svc_skills = state_services.get(svc, {}).get("skills", {})  # per-service resume, not global
         steps = []
         for phase, skill in ordered:
-            status = "pending"
-            if scan_state_path:
-                rec = scanstate.get(scan_state_path, svc, skill)  # per-service resume, not global
-                if rec:
-                    status = rec.get("status", "pending")
+            rec = svc_skills.get(skill)
+            status = rec.get("status", "pending") if rec else "pending"
             steps.append({"phase": phase, "skill": skill, "status": status})
         services.append({"service": svc, "skills": steps})
 

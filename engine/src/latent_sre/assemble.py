@@ -44,16 +44,21 @@ class AssembleResult:
         return not self.validation and not self.secrets
 
 
-def _load_artifacts(scan_dir: Path) -> list[tuple[Path, dict]]:
+def _load_artifacts(scan_dir: Path) -> tuple[list[tuple[Path, dict]], list[str]]:
+    """Return (artifacts, problems). A YAML that fails to parse is reported as a problem rather than
+    silently dropped — otherwise a corrupted source artifact would vanish from the published tree with
+    no diagnostic (fail-quiet). Files that parse but aren't artifacts (no `kind`) are simply not ours."""
     out: list[tuple[Path, dict]] = []
+    problems: list[str] = []
     for p in sorted(list(scan_dir.rglob("*.yaml")) + list(scan_dir.rglob("*.yml"))):  # single global sort
         try:
             doc = yamlio.load(p)
-        except Exception:
+        except Exception as e:
+            problems.append(f"{p}: could not parse, excluded from assembly: {e}")
             continue
         if isinstance(doc, dict) and doc.get("kind"):
             out.append((p, doc))
-    return out
+    return out, problems
 
 
 def _infer_service(docs: list[tuple[Path, dict]]) -> str:
@@ -114,12 +119,13 @@ def _live_hash(path: Path) -> str | None:
 
 def assemble(scan_dir: str | Path, out_dir: str | Path, service: str | None = None) -> AssembleResult:
     scan_dir, out_dir = Path(scan_dir), Path(out_dir)
-    docs = _load_artifacts(scan_dir)
+    docs, load_problems = _load_artifacts(scan_dir)
     service = scaffold.clean_service(service or _infer_service(docs))
     tier = next((d.get("tier") for _, d in docs if d.get("kind") == "Criticality"), None)
     # repo files are clobber-protected via the merge below, so scaffold must not write them directly
     root = scaffold.scaffold(out_dir, service, write_repo_files=False)
     res = AssembleResult(root=root, service=service)
+    res.validation.extend(load_problems)  # a parse failure is fail-closed, not a silent drop
 
     # 1. Render/copy everything into an isolated per-artifact staging tree, so two artifacts that
     #    resolve to the same output path are detected as a collision instead of silently overwriting.

@@ -14,6 +14,12 @@ from typing import Any
 from . import SCHEMA_API_VERSION, yamlio
 
 
+def load_state(path: str | Path) -> dict[str, Any]:
+    """Load the whole checkpoint once. Callers iterating many (service, skill) pairs (e.g. `plan`)
+    should use this and index in-memory rather than calling `get` per pair (which re-reads the file)."""
+    return _load(Path(path))
+
+
 def _load(path: Path) -> dict[str, Any]:
     if Path(path).is_file():
         return yamlio.load(path) or {}
@@ -22,13 +28,6 @@ def _load(path: Path) -> dict[str, Any]:
 
 def get(path: str | Path, service: str, skill: str) -> dict | None:
     return _load(Path(path)).get("services", {}).get(service, {}).get("skills", {}).get(skill)
-
-
-def is_done(path: str | Path, service: str, skill: str, commit: str, engine_version: str) -> bool:
-    rec = get(path, service, skill)
-    return bool(rec and rec.get("status") == "done"
-               and rec.get("inputCommit") == commit
-               and rec.get("engineVersion") == engine_version)
 
 
 def mark(path: str | Path, service: str, skill: str, commit: str, engine_version: str,

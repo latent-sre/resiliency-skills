@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -19,6 +20,14 @@ from .paths import data_dir
 SCHEMA_DIR = data_dir("schemas")
 _API_RE = re.compile(r"^sre\.latent-sre/v(\d+)$")
 _ENGINE_API_MAJOR = int(_API_RE.match(SCHEMA_API_VERSION).group(1))
+
+
+@lru_cache(maxsize=None)
+def _validator_for(schema_path: Path) -> Draft202012Validator:
+    """Build (and cache) the validator for a schema file. validate_tree validates many artifacts of
+    the same kind; without this the schema JSON is re-read and the validator rebuilt for every file."""
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema)
 
 
 def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
@@ -54,9 +63,10 @@ def validate_file(path: str | Path, schema_dir: Path = SCHEMA_DIR) -> list[str]:
     if not schema_path.is_file():
         return [f"{path}: schema {spec.schema}.schema.json not found in {schema_dir}"]
 
-    schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    validator = Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
+    validator = _validator_for(schema_path)
+    # Stringify path elements before sorting: a jsonschema error path can mix int array-indices and
+    # str keys at the same depth (e.g. via anyOf), and comparing int<str raises TypeError mid-sort.
+    errors = sorted(validator.iter_errors(doc), key=lambda e: [str(x) for x in e.path])
     return [f"{path}: {'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in errors]
 
 

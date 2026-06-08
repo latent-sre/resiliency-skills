@@ -23,6 +23,15 @@ def _scan(tmp_path) -> Path:
     return scan
 
 
+def test_assemble_reports_unparseable_artifact_instead_of_dropping_it(tmp_path):
+    # A corrupted source artifact must fail the gate (be reported), not silently vanish from the tree.
+    scan = _scan(tmp_path)
+    (scan / "broken.yaml").write_text("kind: AlertIntent\n  bad: : [\n", encoding="utf-8")
+    res = assemble.assemble(scan, tmp_path / "SRE-checkout")
+    assert not res.ok
+    assert any("could not parse" in v and "broken.yaml" in v for v in res.validation)
+
+
 def test_assemble_produces_valid_clean_repo(tmp_path):
     res = assemble.assemble(_scan(tmp_path), tmp_path / "SRE-checkout")
     assert res.service == "checkout"

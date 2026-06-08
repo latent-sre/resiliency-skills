@@ -109,6 +109,13 @@ def _cmd_scanstate(a) -> int:
     return 0
 
 
+def _cmd_scanstate_set(a) -> int:
+    scanstate.mark(a.path, a.service, a.skill, a.commit, a.engine_version,
+                   a.output, a.content_hash, status=a.status)
+    print(f"scan-state-set: {a.service}/{a.skill} = {a.status}")
+    return 0
+
+
 def _cmd_plan(a) -> int:
     import json
     p = plan.make_plan(a.repo, a.pipeline, a.scan_state)
@@ -163,6 +170,13 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("scan-state", help="read a scan-state record")
     s.add_argument("path"); s.add_argument("--service", required=True)
     s.add_argument("--skill", required=True); s.set_defaults(fn=_cmd_scanstate)
+
+    s = sub.add_parser("scan-state-set", help="record a scan-state checkpoint (resumable scans)")
+    s.add_argument("path"); s.add_argument("--service", required=True)
+    s.add_argument("--skill", required=True); s.add_argument("--commit", required=True)
+    s.add_argument("--engine-version", default=__version__)
+    s.add_argument("--output", default=""); s.add_argument("--content-hash", default="")
+    s.add_argument("--status", default="done"); s.set_defaults(fn=_cmd_scanstate_set)
 
     s = sub.add_parser("plan", help="emit a per-service scan plan (pipeline x fan-out + resume status)")
     s.add_argument("repo")
