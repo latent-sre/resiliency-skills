@@ -1,4 +1,6 @@
 """CLI exit-code contract: 0 = ok, 1 = gate failure, 2 = bad input (missing/unreadable path)."""
+import json
+
 from latent_sre import cli
 
 
@@ -16,6 +18,23 @@ def test_validate_malformed_file_is_a_problem_not_a_crash(tmp_path, capsys):
     bad.write_text("a: : [\n", encoding="utf-8")
     assert cli.main(["validate", str(bad)]) == 1
     assert "could not parse" in capsys.readouterr().err
+
+
+def test_redact_json_output_is_machine_readable(tmp_path, capsys):
+    secret = "AKIA" + "Q" * 16  # assembled so no secret-shaped literal lands in this repo
+    (tmp_path / "creds.yaml").write_text(f"k: {secret}\n", encoding="utf-8")
+    assert cli.main(["--json", "redact", str(tmp_path)]) == 1
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["command"] == "redact" and doc["blocked"] is True
+    assert doc["findings"] and doc["findings"][0]["rule"] == "aws-access-key-id"
+
+
+def test_validate_json_reports_ok(tmp_path, capsys):
+    from pathlib import Path
+    golden = Path(__file__).resolve().parents[2] / "examples" / "golden" / "criticality.yaml"
+    assert cli.main(["--json", "validate", str(golden)]) == 0
+    doc = json.loads(capsys.readouterr().out)
+    assert doc == {"command": "validate", "ok": True, "problems": []}
 
 
 def test_scan_state_set_then_read_roundtrips(tmp_path, capsys):

@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import SCHEMA_API_VERSION, __version__, hashdiff, registry, yamlio
 from .paths import data_dir
-from .render import make_sandbox_env
+from .templating import make_sandbox_env
 
 SCHEMA_DIR = data_dir("schemas")
 TEMPLATE_DIR = data_dir("templates")

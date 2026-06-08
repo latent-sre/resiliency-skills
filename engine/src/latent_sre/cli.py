@@ -6,6 +6,7 @@ Exit codes: 0 = ok; 1 = gate failure (validation errors or secret findings — f
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -15,10 +16,19 @@ from . import (
 )
 
 
+def _emit_json(obj) -> None:
+    print(json.dumps(obj, indent=2))
+
+
 def _cmd_redact(a) -> int:
     findings = []
     for p in a.path:
         findings.extend(redact.scan_path(Path(p)))
+    if a.json:
+        _emit_json({"command": "redact", "blocked": bool(findings),
+                    "findings": [{"path": f.path, "line": f.line, "rule": f.rule, "excerpt": f.excerpt}
+                                 for f in findings]})
+        return 1 if findings else 0
     if findings:
         print(f"redact: BLOCKED — {len(findings)} potential secret(s):", file=sys.stderr)
         for f in findings:
@@ -36,6 +46,9 @@ def _cmd_validate(a) -> int:
     for path in a.path:
         t = Path(path)
         problems += validate.validate_tree(t, schema_dir) if t.is_dir() else validate.validate_file(t, schema_dir)
+    if a.json:
+        _emit_json({"command": "validate", "ok": not problems, "problems": problems})
+        return 1 if problems else 0
     if problems:
         print(f"validate: {len(problems)} problem(s):", file=sys.stderr)
         for p in problems:
@@ -64,6 +77,14 @@ def _cmd_render_dashboard(a) -> int:
 
 def _cmd_assemble(a) -> int:
     res = assemble.assemble(a.scan_dir, a.out, a.service)
+    if a.json:
+        _emit_json({"command": "assemble", "ok": res.ok, "service": res.service, "root": str(res.root),
+                    "written": [str(w) for w in res.written],
+                    "proposed": [str(p) for p in res.proposed],
+                    "removed": [str(r) for r in res.removed],
+                    "validation": res.validation,
+                    "secrets": [str(s) for s in res.secrets]})
+        return 0 if res.ok else 1
     for w in res.written:
         print(w)
     print(f"assemble: {res.service} -> {res.root} ({len(res.written)} files)")
@@ -131,6 +152,9 @@ def _cmd_plan(a) -> int:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="latent-sre", description="SRE skills deterministic engine")
     p.add_argument("--version", action="version", version=f"latent-sre {__version__}")
+    # Structured output for the orchestrator/CI to consume instead of scraping human text. Honored by
+    # the gate commands (redact/validate/assemble); exit codes are unchanged. Must precede the subcommand.
+    p.add_argument("--json", action="store_true", help="emit machine-readable JSON (gate commands)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("redact", help="fail-closed secret/PII scan")
