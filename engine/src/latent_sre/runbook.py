@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import __version__, yamlio
+from .naming import strip_known_suffix
 from .paths import data_dir
 from .templating import make_sandbox_env
 
@@ -44,17 +45,10 @@ def render_runbook(spec: dict) -> str:
     )
 
 
-def _basename(name: str) -> str:
-    for suff in _SPEC_SUFFIXES:
-        if name.endswith(suff):
-            return name[: -len(suff)]
-    return name
-
-
 def render_runbook_file(spec_path: str | Path, out_dir: str | Path) -> Path:
     spec = yamlio.load(spec_path)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    dest = out / f"{_basename(Path(spec_path).name)}.md"
+    dest = out / f"{strip_known_suffix(Path(spec_path).name, _SPEC_SUFFIXES)}.md"
     dest.write_text(render_runbook(spec), encoding="utf-8")
     return dest

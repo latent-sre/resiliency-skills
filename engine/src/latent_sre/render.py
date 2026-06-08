@@ -10,10 +10,10 @@ so an accidental apply FAILS LOUD instead of silently targeting the wrong system
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from . import yamlio
+from .naming import safe_basename
 from .paths import data_dir
 from .templating import make_sandbox_env, sentinel
 
@@ -65,15 +65,6 @@ def render_intent(intent: dict, target: str, adapter_dir: Path = ADAPTER_DIR, ti
     return tmpl.render(**ctx)
 
 
-def _safe_basename(name: str, fallback: str = "alert") -> str:
-    """The output filename derives from untrusted artifact content (`metadata.name`); strip any path
-    components and constrain to a safe charset so a hostile name can't escape the target dir
-    (path traversal — see render_file). The schema constrains name, but assemble renders before it
-    validates, so this must self-protect."""
-    base = re.sub(r"[^A-Za-z0-9._-]", "-", Path(str(name)).name).strip("._-")
-    return base or fallback
-
-
 def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str] | None = None,
                 adapter_dir: Path = ADAPTER_DIR, tier: str | None = None) -> list[Path]:
     intent = yamlio.load(intent_path)
@@ -81,7 +72,9 @@ def render_file(intent_path: str | Path, out_dir: str | Path, targets: list[str]
         targets = intent.get("spec", {}).get("renderTargets", TARGETS)
     out_dir = Path(out_dir)
     written: list[Path] = []
-    name = _safe_basename(intent.get("metadata", {}).get("name", "alert"))
+    # The filename derives from untrusted artifact content (metadata.name) and assemble renders before
+    # it validates, so this must self-protect against path traversal.
+    name = safe_basename(intent.get("metadata", {}).get("name", "alert"))
     for t in targets:
         if t not in TARGETS:
             continue  # unknown target from an (untrusted) artifact's renderTargets — skip rather than

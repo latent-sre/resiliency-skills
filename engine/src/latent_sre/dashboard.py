@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from . import yamlio
+from .naming import strip_known_suffix
 from .templating import sentinel
 
 _SPEC_SUFFIXES = (".dashboard.yaml", ".dashboard.yml", ".yaml", ".yml")
@@ -47,17 +48,10 @@ def render_dashboard(spec: dict) -> str:
     return json.dumps(dashboard, indent=2)
 
 
-def _basename(name: str) -> str:
-    for suff in _SPEC_SUFFIXES:
-        if name.endswith(suff):
-            return name[: -len(suff)]
-    return name
-
-
 def render_dashboard_file(spec_path: str | Path, out_dir: str | Path) -> Path:
     spec = yamlio.load(spec_path)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    dest = out / f"{_basename(Path(spec_path).name)}.json"
+    dest = out / f"{strip_known_suffix(Path(spec_path).name, _SPEC_SUFFIXES)}.json"
     dest.write_text(render_dashboard(spec), encoding="utf-8")
     return dest
